@@ -1,0 +1,13 @@
+include_directories(AFTER ${FLEX_INCLUDE_DIRS} "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+set(TIMELINE2GIF_SRC_FILES
+  timeline2gif.c
+)
+
+BISON_TARGET(parser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.c)
+FLEX_TARGET(lexer lexer.l  ${CMAKE_CURRENT_BINARY_DIR}/lexer.c)
+ADD_FLEX_BISON_DEPENDENCY(lexer parser)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+add_executable(timeline2gif ${TIMELINE2GIF_SRC_FILES} ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
+target_link_libraries(timeline2gif ${CMAKE_DL_LIBS})
