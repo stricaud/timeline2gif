@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+#include "timeline.h" 
 #include <parser.h>
 
 void t2gerror (const char *s);

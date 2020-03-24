@@ -6,8 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "timeline.h"	
 #include <parser.h>
-#include "timeline2gif.h"	
 
 int t2glex(); 
 extern void t2gerror(t2g_t **t2g, const char *p);
