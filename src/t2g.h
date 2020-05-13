@@ -10,7 +10,8 @@ struct _t2g_t {
 };
 typedef struct _t2g_t t2g_t;
 
-t2g_t *t2g_new(uint16_t width, uint16_t height);
+t2g_t *t2g_new();
+int t2g_append(t2g_t *t2g);
 void t2g_free(t2g_t *timeline);
 
 #endif // _T2G_H_

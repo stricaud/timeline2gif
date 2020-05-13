@@ -11,7 +11,7 @@
 
 int t2glex(); 
 extern void t2gerror(t2g_t **t2g, const char *p);
-
+	
 #define T2G_ABORT return -1;
 #define T2GERROR_VERBOSE
 

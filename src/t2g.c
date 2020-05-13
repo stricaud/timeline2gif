@@ -3,7 +3,7 @@
 
 #include "t2g.h"
 
-t2g_t *t2g_new(uint16_t width, uint16_t height)
+t2g_t *t2g_new(void)
 {
 	t2g_t *t2g;
 
