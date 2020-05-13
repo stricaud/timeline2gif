@@ -1,6 +1,7 @@
 include_directories(AFTER ${FLEX_INCLUDE_DIRS} "${CMAKE_CURRENT_BINARY_DIR}/src" "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(TIMELINE2GIF_SRC_FILES
+  t2g.c
   timeline2gif.c
 )
 

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "timeline.h"	
+#include "t2g.h"	
 #include <parser.h>
 
 int t2glex(); 
