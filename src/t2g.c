@@ -14,7 +14,18 @@ t2g_t *t2g_new(void)
 	}
 	t2g->root = t2g;
 	t2g->next = NULL;
-
+	t2g->timeline_color.a = 255;
+	t2g->timeline_color.r = 0;
+	t2g->timeline_color.g = 0;
+	t2g->timeline_color.b = 0;
+	t2g->mark_color.a = 255;
+	t2g->mark_color.r = 0;
+	t2g->mark_color.g = 0;
+	t2g->mark_color.b = 0;
+	
+	t2g->time_text = NULL;
+	t2g->label_text = NULL;
+	
 	return t2g;
 }
 
@@ -32,7 +43,7 @@ int t2g_append(t2g_t *t2g) {
 		return -1;
 	}
 	iter->next->next = NULL;
-	iter->next->foo = 1234;
+	iter->next = t2g;
 
 	return 0;
 }

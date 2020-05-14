@@ -2,7 +2,6 @@
 #include "t2g.h"
 #include <parser.h>
 
-
 int main(int argc, char **argv)
 {
 	FILE *in, *out;
@@ -19,16 +18,19 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Cannot import file %s\n", argv[1]);
 		return -1;
 	}
-	/* t2glrestart(in); */
 
 	t2g = t2g_new();
 
+	t2g_parser_init();
 	t2grestart(in);
 	retval = t2gparse(&t2g);
+	t2g_parser_terminate();
 	
 	fflush(in);
 	fclose(in);
 	in = NULL;
+
+
 	
 	return 0;
 }
