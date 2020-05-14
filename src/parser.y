@@ -98,6 +98,18 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 	      r = (unsigned char)strtol(R, NULL, 10);
 	      g = (unsigned char)strtol(G, NULL, 10);
 	      b = (unsigned char)strtol(B, NULL, 10);
+
+	      if (!strcmp($3, "color")) {
+		      if (!strcmp($1, "timeline")) {
+			      printf("set timeline\n");
+		      } else if (!strcmp($1, "mark")) {
+			      printf("set mark\n");
+		      } else {
+			      fprintf(stderr, "ERR[%d]: unknown object %s\n", t2gget_lineno(), $1);
+		      }
+	      } else {
+		      fprintf(stderr, "ERR[%d]: argb() function must be set for a color definition\n", t2gget_lineno());
+	      }
 	      
       out:
 	      free($1);
