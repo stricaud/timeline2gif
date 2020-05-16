@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "t2g.h"
+#include "write-gif.h"
 #include <parser.h>
 
 int main(int argc, char **argv)
@@ -23,14 +24,14 @@ int main(int argc, char **argv)
 
 	t2g_parser_init();
 	t2grestart(in);
-	retval = t2gparse(&t2g);
+	retval = t2gparse(t2g);
 	t2g_parser_terminate();
 	
 	fflush(in);
 	fclose(in);
 	in = NULL;
 
-
+	write_gif(t2g, argv[2]);
 	
 	return 0;
 }

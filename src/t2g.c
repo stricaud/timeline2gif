@@ -12,6 +12,8 @@ t2g_t *t2g_new(void)
 		fprintf(stderr, "Cannot initialize t2g!\n");
 		return NULL;
 	}
+	t2g->width = 800;
+	t2g->height = 500;
 	t2g->root = t2g;
 	t2g->next = NULL;
 	t2g->timeline_color.a = 255;
@@ -29,28 +31,32 @@ t2g_t *t2g_new(void)
 	return t2g;
 }
 
-int t2g_append(t2g_t *t2g) {
+int t2g_append(t2g_t *t2g_root, t2g_t *t2g_next) {
 	t2g_t *iter;
-	iter = t2g->root;
+	iter = t2g_root->root;
 	if (iter) {
 		while (iter->next) {
 			iter = iter->next;
 		}
 	}
-	iter->next = (t2g_t *)malloc(sizeof(t2g_t));
-	if (!iter->next) {
-		fprintf(stderr, "Cannot initialize the item to append!\n");
-		return -1;
-	}
-	iter->next->next = NULL;
-	iter->next = t2g;
+	iter->next = t2g_next;
 
 	return 0;
 }
 
-
 void t2g_free(t2g_t *t2g)
 {
+	t2g_t *iter;
+	t2g_t *this;
+	
+	iter = t2g->root;
+	if (iter) {
+		while(iter->next) {
+			this = iter;
+			iter = iter->next;
+			free(this);
+		}
+	}
 	free(t2g);
 }
 

@@ -3,7 +3,6 @@
 #include <gd.h>
 #include <gdfontl.h>
 
-#include <parser.h>
 
 #define IMHEIGHT 500
 #define IMWIDTH 800

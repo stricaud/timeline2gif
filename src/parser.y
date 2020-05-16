@@ -1,5 +1,5 @@
 %define api.prefix {t2g}
-%param {t2g_t **timeline}
+%param {t2g_t *timeline}
 
 %{
 #include <stdio.h>
@@ -9,11 +9,12 @@
 #include "t2g.h"	
 #include <parser.h>
 #include <regex.h>
-	
+
 int t2glex(); 
-extern void t2gerror(t2g_t **t2g, const char *p);
+extern void t2gerror(t2g_t *t2g, const char *p);
 
 regex_t rex_argb;
+t2g_t *t2g_current = NULL;
 
 #define T2G_ABORT return -1;
 #define T2GERROR_VERBOSE
@@ -43,7 +44,7 @@ input:
 
 setting_str: TOK_WORD TOK_DOT TOK_WORD TOK_WORD
       {
-	      printf("Setting element:%s.%s [%s]\n", $1, $3, $4);
+	      /* printf("Setting element:%s.%s [%s]\n", $1, $3, $4); */
 	      free($1);
 	      free($3);
 	      free($4);
@@ -101,9 +102,9 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 
 	      if (!strcmp($3, "color")) {
 		      if (!strcmp($1, "timeline")) {
-			      printf("set timeline\n");
+			      /* printf("set timeline\n"); */
 		      } else if (!strcmp($1, "mark")) {
-			      printf("set mark\n");
+			      /* printf("set mark\n"); */
 		      } else {
 			      fprintf(stderr, "ERR[%d]: unknown object %s\n", t2gget_lineno(), $1);
 		      }
@@ -120,15 +121,23 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 
 setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
       {
+	      
 	      free($1);
 	      free($3);
-
       }
       ;
 
 item: TOK_STRING TOK_STRING
        {
-	       printf("key:%s;val:%s\n", $1, $2);
+	       if (!t2g_current) {
+		       t2g_current = t2g_new();
+	       }	       
+	       t2g_current->time_text = strdup($1);
+	       t2g_current->label_text = strdup($2);
+
+	       t2g_append(timeline, t2g_current);
+	       t2g_current = NULL;
+	       
 	       free($1);
 	       free($2);
        }
@@ -156,7 +165,7 @@ void t2g_parser_terminate(void)
 char *t2gget_text(void);
 int t2gget_lineno (void);
 
-void t2gerror(t2g_t **t2g, const char *str)
+void t2gerror(t2g_t *t2g, const char *str)
 {
 	fprintf(stderr, "Parsing error: invalid token '%s' line %d: %s\n", t2gget_text(), t2gget_lineno()+1, str);
 	exit(1);
