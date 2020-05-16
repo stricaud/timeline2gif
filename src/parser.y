@@ -121,6 +121,20 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 
 setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
       {
+	      if (!strcmp($1, "speed")) {
+		      if (!strcmp($3, "nextitem")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->speed_nextitem = $4;
+		      }
+		      if (!strcmp($3, "frames")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->speed_frames = $4;
+		      }
+	      }
 	      
 	      free($1);
 	      free($3);

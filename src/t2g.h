@@ -20,6 +20,9 @@ struct _t2g_t {
 	
 	int width;
 	int height;
+
+	int speed_nextitem;
+	int speed_frames;
 	
 	struct _t2g_t *root;
 	struct _t2g_t *next;

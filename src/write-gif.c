@@ -27,6 +27,9 @@ static gdImagePtr _write_in_every_frame(t2g_t *t2g, gdImagePtr im)
 {
 
 	_new_image_with_background(t2g, im, 255, 255, 255);
+
+	// We clear our image for each frame
+	gdImageFilledRectangle(im, 0, 0, t2g->width, t2g->height, gdTrueColorAlpha(255,255,255,0));
 	
 	gdImageLine(im, 0, t2g->height/2, t2g->width, t2g->height/2, gdTrueColorAlpha(0,0,0,0)); // Timeline line
 	/* gdImageColorTransparent (im, gdTrueColorAlpha(0,0,0,0)); */
@@ -38,7 +41,7 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
 {
 	gdImagePtr prev =NULL;
 	int black, white;
-	int delay = 6;
+	/* int delay = 6; */
 	int ypos = 0;
 	int xpos = 0;
 	int brect[8];
@@ -49,6 +52,7 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
 
 		switch(framepos) {
 		case 0:
+			printf("Frame 0\n");
 			im = effects_central_rect_shrinks_to_xy(t2g, im, framepos, 0, 0);
 			
 			im = effects_center_text(t2g, im, t2g->width/2, t2g->height/2, "This is a revolution");
@@ -76,8 +80,12 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
 			fprintf(stderr, "Uh? Should nevery see this!\n");
 		}
 		
-		
-		gdImageGifAnimAdd(im, out, 1, 0, 0, delay, 0, NULL);
+
+		if (framepos < 9) {
+			gdImageGifAnimAdd(im, out, 1, 0, 0, t2g->speed_frames, 0, NULL);
+		} else {
+			gdImageGifAnimAdd(im, out, 1, 0, 0, t2g->speed_nextitem, 0, NULL);			
+		}
 	}
 		
 	
