@@ -45,9 +45,9 @@ static gdImagePtr _new_image_with_background(t2g_t *t2g, gdImagePtr im, char r, 
 static gdImagePtr _write_in_every_frame(t2g_t *t2g, gdImagePtr im)
 {
 	_new_image_with_background(t2g, im, 255, 255, 255);
-	// We clear our image for each frame
+	// We clear our image for each frame. This allows us to run effects and animation that don't persist.
 	gdImageFilledRectangle(im, 0, 0, t2g->width, t2g->height, gdTrueColorAlpha(255,255,255,0));
-
+	// However we want stuff to persist, here they come:
 	im = _merge_with_permanent_image(t2g, im);
 	
 	gdImageLine(im, 0, t2g->timeline_pos_y, t2g->width, t2g->timeline_pos_y, gdTrueColorAlpha(0,0,0,0)); // Timeline line
