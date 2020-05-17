@@ -26,6 +26,7 @@ t2g_t *t2g_new(void)
 	t2g->mark_color.b = 0;
 	t2g->speed_nextitem = 10;
 	t2g->speed_frames = 6;
+	t2g->timeline_pos_y = t2g->height / 2;
 	
 	t2g->time_text = NULL;
 	t2g->label_text = NULL;

@@ -23,6 +23,7 @@ struct _t2g_t {
 
 	int speed_nextitem;
 	int speed_frames;
+	int timeline_pos_y;
 	
 	struct _t2g_t *root;
 	struct _t2g_t *next;

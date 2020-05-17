@@ -17,7 +17,11 @@
 #define BRECT_UPPER_LEFT_X 6
 #define BRECT_UPPER_LEFT_Y 7
 
+#define FRAMES_PER_ITEM 10
+
 gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int x, int y, char *text);
 gdImagePtr effects_central_rect_shrinks_to_xy(t2g_t *t2g, gdImagePtr im, int frame, int dest_x, int dest_y);
+gdImagePtr effects_linedown(t2g_t *t2g, gdImagePtr im, int frame, int x);
+gdImagePtr effects_pin(t2g_t *t2g, gdImagePtr im, int frame, int x);
 
 #endif	// _T2G_EFFECTS_H_

@@ -31,13 +31,13 @@ static gdImagePtr _write_in_every_frame(t2g_t *t2g, gdImagePtr im)
 	// We clear our image for each frame
 	gdImageFilledRectangle(im, 0, 0, t2g->width, t2g->height, gdTrueColorAlpha(255,255,255,0));
 	
-	gdImageLine(im, 0, t2g->height/2, t2g->width, t2g->height/2, gdTrueColorAlpha(0,0,0,0)); // Timeline line
+	gdImageLine(im, 0, t2g->timeline_pos_y, t2g->width, t2g->timeline_pos_y, gdTrueColorAlpha(0,0,0,0)); // Timeline line
 	/* gdImageColorTransparent (im, gdTrueColorAlpha(0,0,0,0)); */
 	gdImageSetAntiAliased (im, gdTrueColorAlpha(0,0,0,0));
 	return im;
 }
 
-static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
+static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im, int count)
 {
 	gdImagePtr prev =NULL;
 	int black, white;
@@ -45,19 +45,25 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
 	int ypos = 0;
 	int xpos = 0;
 	int brect[8];
+	int effect_speed;
+
 	
 	char framepos;
 	for (framepos = 0; framepos < KEYFRAMES; framepos++) {
 		im = _write_in_every_frame(t2g, im);
 
+		im = effects_linedown(t2g, im, framepos, count * 40);
+		
+		effect_speed = 0;
+		
 		switch(framepos) {
 		case 0:
-			printf("Frame 0\n");
-			im = effects_central_rect_shrinks_to_xy(t2g, im, framepos, 0, 0);
-			
-			im = effects_center_text(t2g, im, t2g->width/2, t2g->height/2, "This is a revolution");
+			im = effects_central_rect_shrinks_to_xy(t2g, im, framepos, 0, t2g->height/2);			
+			im = effects_center_text(t2g, im, t2g->width/2, t2g->height/2, t2g->label_text);
+			effect_speed = 100;
 			break;
 		case 1:
+			im = effects_central_rect_shrinks_to_xy(t2g, im, framepos, 0, t2g->height/2);
 			break;
 		case 2:
 			break;
@@ -82,7 +88,7 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im)
 		
 
 		if (framepos < 9) {
-			gdImageGifAnimAdd(im, out, 1, 0, 0, t2g->speed_frames, 0, NULL);
+			gdImageGifAnimAdd(im, out, 1, 0, 0, t2g->speed_frames + effect_speed, 0, NULL);
 		} else {
 			gdImageGifAnimAdd(im, out, 1, 0, 0, t2g->speed_nextitem, 0, NULL);			
 		}
@@ -149,7 +155,8 @@ int write_gif(t2g_t *t2g, char *outgif)
 	int delay = 6;
 	int ypos = 0;
 	int xpos = 0;
-
+	int count = 1;
+	
 	out = fopen(outgif, "wb");
 	if (!out) {
 		fprintf(stderr, "can't create file %s", outgif);
@@ -165,7 +172,8 @@ int write_gif(t2g_t *t2g, char *outgif)
 	if(iter) {
 		while (iter->next) {
 			iter = iter->next;
-			_write_single_object(out, iter, im);
+			_write_single_object(out, iter, im, count);
+			count++;
 		}
 	}      
 

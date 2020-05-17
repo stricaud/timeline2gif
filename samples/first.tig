@@ -9,13 +9,12 @@ description.font_size 12
 mark.color argb(255,0,98,174)
 speed.linedown 6
 speed.textwrite 10
-speed.frames 400
+speed.frames 5
 speed.nextitem 50
 speed.camera 10
 item.space 40
 
-"Jan 2020" "This is 
-my\" 
-story"
-#"Feb 2020" "We all went to RSA"
-#"Mar 2020" "FIRST was postponed, CanSec went online"
+"Jan 2020" "My story!"
+"Feb 2020" "We all went to RSA"
+"Mar 2020" "FIRST was postponed, 
+CanSec went online"
