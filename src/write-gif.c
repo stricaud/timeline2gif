@@ -10,6 +10,25 @@
 
 #define KEYFRAMES 10
 
+static gdImagePtr permanent_im;
+
+static void _save_to_permanent_image(t2g_t *t2g, gdImagePtr im)
+{
+	gdImageCopy(permanent_im, im, 0, 0, 0, 0, t2g->width-1, t2g->height-1);
+}
+
+static gdImagePtr _merge_with_permanent_image(t2g_t *t2g, gdImagePtr im)
+{
+	gdImageCopy(im, permanent_im, 0, 0, 0, 0, t2g->width-1, t2g->height-1);
+	
+	return im;
+}
+
+static void _destroy_permanent_image()
+{
+	gdImageDestroy(permanent_im);
+}
+
 
 static gdImagePtr _new_image_with_background(t2g_t *t2g, gdImagePtr im, char r, char g, char b)
 {
@@ -25,15 +44,16 @@ static gdImagePtr _new_image_with_background(t2g_t *t2g, gdImagePtr im, char r, 
 
 static gdImagePtr _write_in_every_frame(t2g_t *t2g, gdImagePtr im)
 {
-
 	_new_image_with_background(t2g, im, 255, 255, 255);
-
 	// We clear our image for each frame
 	gdImageFilledRectangle(im, 0, 0, t2g->width, t2g->height, gdTrueColorAlpha(255,255,255,0));
+
+	im = _merge_with_permanent_image(t2g, im);
 	
 	gdImageLine(im, 0, t2g->timeline_pos_y, t2g->width, t2g->timeline_pos_y, gdTrueColorAlpha(0,0,0,0)); // Timeline line
 	/* gdImageColorTransparent (im, gdTrueColorAlpha(0,0,0,0)); */
 	gdImageSetAntiAliased (im, gdTrueColorAlpha(0,0,0,0));
+	
 	return im;
 }
 
@@ -80,6 +100,7 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im, int count)
 		case 8:
 			break;
 		case 9:
+			_save_to_permanent_image(t2g, im);
 			break;
 			
 		default:
@@ -97,50 +118,6 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im, int count)
 	
 	
 	
-/* 	ypos = 0; */
-/* 	for(i = 0; i < 14; i++) { */
-/* 		int r,g,b; */
-/* 		im = gdImageCreate(imwidth, imheight); */
-		
-/* 		/\* r = rand() % 255; *\/ */
-/* 		/\* g = rand() % 255; *\/ */
-/* 		/\* b = rand() % 255; *\/ */
-
-/* 		gdImageColorAllocate(im, 255, 255, 255);  /\* allocate white as side effect *\/ */
-/* //		black = gdImageColorAllocate(im, 0, 0, 0); */
-/* 		black = gdImageColorAllocate(im, 0, 0, 0); */
-/* 		gdImageLine(im, 0, 0+(imheight/2), imwidth, 0+(imheight/2), black); // Timeline line */
-
-/* 		#if 0 */
-/* 		if (i < 10) { */
-/* 			ypos = i*((imheight/2)/10); */
-/* 		} */
-		
-/* 		gdImageLine(im, 40, ypos-20, 40, ypos+20, black); */
-
-/* 		if (i > 9) { */
-/* 			gdImageFilledEllipse(im, 40, (imheight/2), 10, 10, gdImageColorAllocate(im, 0, 98, 174)); */
-/* 		} */
-/* 		if (i >= 10) { */
-/* 			gdImageString(im, gdFontGetLarge(), 40, ypos - 30, t2g->label_text, black); */
-/* 			delay += 10; */
-/* 		} */
-/* 		/\* if (i>10) { *\/ */
-/* 		/\* 	gdImageString(im, gdFontGetLarge(), 40, ypos - 30, t2g->label_text, black); *\/ */
-/* 		/\* } *\/ */
-/* /\* gdImageLine(im, 0, 0+i, imwidth, 0+i, black); *\/ */
-
-/* 		/\* black = gdImageColorAllocate(im,  r, g, b); *\/ */
-/* 		/\* printf("(%i, %i, %i)\n",r, g, b); *\/ */
-/* 		/\* gdImageFilledRectangle(im, rand() % 100, rand() % 100, rand() % 100, rand() % 100, black); *\/ */
-/* 		gdImageGifAnimAdd(im, out, 1, 0, 0, delay, 1, prev); */
-
-/* 		if(prev) { */
-/* 			gdImageDestroy(prev); */
-/* 		} */
-/* 		prev = im; */
-/* 		#endif */
-/* 	}	 */
 }
 
 int write_gif(t2g_t *t2g, char *outgif)
@@ -164,6 +141,7 @@ int write_gif(t2g_t *t2g, char *outgif)
 	} 	
 
 	im = _new_image_with_background(t2g, im, 255, 255, 255);
+	permanent_im = _new_image_with_background(t2g, permanent_im, 255, 255, 255);
 	
 	gdImageGifAnimBegin(im, out, 1, -1);
 	
