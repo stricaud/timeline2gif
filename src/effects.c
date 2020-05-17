@@ -4,14 +4,14 @@
 #include "t2g.h"
 #include "effects.h"
 
-gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int x, int y, char *text)
+gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int x, int y, int angle, char *text)
 {
 	int brect[8];
 	
 	gdImageStringFT(NULL, brect, 0,
 			DEFAULT_FONT, 16,
 			0,
-			0, 0,
+			0, angle,
 			text);
 	int text_width = brect[BRECT_LOWER_RIGHT_X] - brect[BRECT_LOWER_LEFT_X];
 	int text_height = brect[BRECT_LOWER_LEFT_Y] - brect[BRECT_UPPER_LEFT_Y];
@@ -20,12 +20,26 @@ gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int x, int y, char *te
 	
 	gdImageStringFT(im, brect, gdTrueColorAlpha(0,0,0,0),
 			DEFAULT_FONT, 16,
-			0,
+			angle,
 			x-text_center_pos_x, y-text_center_pos_y,
 			text);
 
 	return im;
 }
+
+gdImagePtr effects_text(t2g_t *t2g, gdImagePtr im, int x, int y, int angle, char *text)
+{
+	int brect[8];
+	
+	gdImageStringFT(im, brect, gdTrueColorAlpha(0,0,0,0),
+			DEFAULT_FONT, 16,
+			angle,
+			x, y,
+			text);
+
+	return im;
+}
+
 
 gdImagePtr effects_central_rect_shrinks_to_xy(t2g_t *t2g, gdImagePtr im, int frame, int dest_x, int dest_y)
 {
@@ -76,8 +90,8 @@ gdImagePtr effects_linedown(t2g_t *t2g, gdImagePtr im, int frame, int x)
 	}
 	if (frame == FRAMES_PER_ITEM-1) {
 		gdImageFilledEllipse(im, x, (t2g->timeline_pos_y + 10) - (linesize * frame), 10, 10, gdTrueColorAlpha(0, 98, 174, 0));
-		im = effects_center_text(t2g, im, x, (t2g->timeline_pos_y + 10) - (linesize * frame) - 20, t2g->label_text);
-		im = effects_center_text(t2g, im, x, t2g->timeline_pos_y + 40, t2g->time_text);
+		im = effects_text(t2g, im, x, (t2g->timeline_pos_y + 10) - (linesize * frame) - 20, 45, t2g->label_text);
+		im = effects_center_text(t2g, im, x, t2g->timeline_pos_y + 40, 0, t2g->time_text);
 	}
 			
 	return im;
