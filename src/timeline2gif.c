@@ -2,13 +2,14 @@
 #include "t2g.h"
 #include "write-gif.h"
 #include <parser.h>
+#include "effects.h"
 
 int main(int argc, char **argv)
 {
 	FILE *in, *out;
 	t2g_t *t2g;
 	int retval;
-	
+
 	if (argc < 3) {
  	        fprintf(stderr, "Usage: %s timeline.t2g timeline.gif\n", argv[0]);
 		return 1;

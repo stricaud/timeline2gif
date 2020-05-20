@@ -6,7 +6,7 @@
 
 #include "t2g.h"
 
-#define DEFAULT_FONT "/usr/share/wine/fonts/times.ttf"
+#define DEFAULT_FONT T2G_DATA_DIR"/fonts/NotoMono-Regular.ttf"
 
 #define BRECT_LOWER_LEFT_X 0
 #define BRECT_LOWER_LEFT_Y 1
@@ -19,7 +19,8 @@
 
 #define FRAMES_PER_ITEM 10
 
-gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int x, int y, int angle, char *text);
+gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, int size, int x, int y, int angle, char *text);
+gdImagePtr effects_text(t2g_t *t2g, gdImagePtr im, int size, int x, int y, int angle, char *text);
 gdImagePtr effects_central_rect_shrinks_to_xy(t2g_t *t2g, gdImagePtr im, int frame, int dest_x, int dest_y);
 gdImagePtr effects_linedown(t2g_t *t2g, gdImagePtr im, int frame, int x);
 gdImagePtr effects_pin(t2g_t *t2g, gdImagePtr im, int frame, int x);

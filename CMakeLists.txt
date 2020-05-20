@@ -14,9 +14,13 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${timeline2gif_SOURCE_DIR}/cmake)
 
+set(T2G_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/timeline2gif/")
+add_definitions(-DT2G_DATA_DIR="${T2G_DATA_DIR}")
+
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 find_package(GD REQUIRED)
 
+add_subdirectory(fonts)
 add_subdirectory(src)
 

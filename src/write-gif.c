@@ -79,7 +79,7 @@ static int _write_single_object(FILE *out, t2g_t *t2g, gdImagePtr im, int count)
 		switch(framepos) {
 		case 0:
 			im = effects_central_rect_shrinks_to_xy(t2g, im, framepos, 0, t2g->height/2);			
-			im = effects_center_text(t2g, im, t2g->width/2, t2g->height/2, 0, t2g->label_text);
+			im = effects_center_text(t2g, im, 18, t2g->width/2, t2g->height/2, 0, t2g->label_text);
 			effect_speed = 100;
 			break;
 		case 1:
