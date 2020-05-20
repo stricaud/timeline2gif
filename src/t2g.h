@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+
+#define DEFAULT_FONT T2G_DATA_DIR"/fonts/NotoMono-Regular.ttf"
+
+
 struct _t2gcolor_t {
 	unsigned char a;
 	unsigned char r;
@@ -24,6 +28,11 @@ struct _t2g_t {
 	int speed_nextitem;
 	int speed_frames;
 	int timeline_pos_y;
+
+	char *time_font;
+	int time_font_size;
+	char *description_font;
+	int description_font_size;
 	
 	struct _t2g_t *root;
 	struct _t2g_t *next;
@@ -38,5 +47,10 @@ void t2grestart(FILE *);
 t2g_t *t2g_new();
 int t2g_append(t2g_t *t2g_root, t2g_t *next);
 void t2g_free(t2g_t *timeline);
+
+char *t2g_get_description_font(t2g_t *t2g);
+int t2g_get_description_font_size(t2g_t *t2g);
+char *t2g_get_time_font(t2g_t *t2g);
+int t2g_get_time_font_size(t2g_t *t2g);
 
 #endif // _T2G_H_

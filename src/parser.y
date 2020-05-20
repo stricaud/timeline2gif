@@ -44,7 +44,24 @@ input:
 
 setting_str: TOK_WORD TOK_DOT TOK_WORD TOK_WORD
       {
-	      /* printf("Setting element:%s.%s [%s]\n", $1, $3, $4); */
+
+	      if (!strcmp($1, "time")) {
+		      if (!strcmp($3, "font")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->time_font = strdup($4);
+		      }
+	      }
+	      if (!strcmp($1, "description")) {
+		      if (!strcmp($3, "font")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->description_font = strdup($4);
+		      }
+	      }
+	      
 	      free($1);
 	      free($3);
 	      free($4);
@@ -135,6 +152,24 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			      t2g_current->speed_frames = $4;
 		      }
 	      }
+
+	      if (!strcmp($1, "time")) {
+		      if (!strcmp($3, "font_size")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->time_font_size = $4;
+		      }
+	      }
+	      if (!strcmp($1, "description")) {
+		      if (!strcmp($3, "font_size")) {
+			      if (!t2g_current) {
+				      t2g_current = t2g_new();
+			      }	       
+			      t2g_current->description_font_size = $4;
+		      }
+	      }
+
 	      
 	      free($1);
 	      free($3);

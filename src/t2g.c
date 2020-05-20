@@ -16,6 +16,10 @@ t2g_t *t2g_new(void)
 	t2g->height = 500;
 	t2g->root = t2g;
 	t2g->next = NULL;
+	t2g->description_font = NULL;
+	t2g->description_font_size = 0;
+	t2g->time_font = NULL;
+	t2g->time_font_size = 0;
 	t2g->timeline_color.a = 255;
 	t2g->timeline_color.r = 0;
 	t2g->timeline_color.g = 0;
@@ -55,11 +59,58 @@ void t2g_free(t2g_t *t2g)
 	iter = t2g->root;
 	if (iter) {
 		while(iter->next) {
-			this = iter;
+			free(iter->time_font);
+			free(iter->description_font);
+			
+			this = iter;			
 			iter = iter->next;
 			free(this);
 		}
 	}
 	free(t2g);
+}
+
+char *t2g_get_description_font(t2g_t *t2g)
+{
+	if (t2g->description_font) {
+		return t2g->description_font;
+	}
+	if (t2g->root->description_font) {
+		return t2g->description_font;
+	}	
+	return DEFAULT_FONT;
+}
+
+int t2g_get_description_font_size(t2g_t *t2g)
+{
+	if (t2g->description_font_size) {
+		return t2g->description_font_size;
+	}
+	if (t2g->root->description_font_size) {
+		return t2g->description_font_size;
+	}	
+	return 14;
+}
+
+char *t2g_get_time_font(t2g_t *t2g)
+{
+	if (t2g->time_font) {
+		return t2g->time_font;
+	}
+	if (t2g->root->time_font) {
+		return t2g->time_font;
+	}	
+	return DEFAULT_FONT;
+}
+
+int t2g_get_time_font_size(t2g_t *t2g)
+{
+	if (t2g->time_font_size) {
+		return t2g->time_font_size;
+	}
+	if (t2g->root->time_font_size) {
+		return t2g->time_font_size;
+	}	
+	return 14;
 }
 
