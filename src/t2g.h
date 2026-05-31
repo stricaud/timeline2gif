@@ -4,9 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-
-#define DEFAULT_FONT T2G_DATA_DIR"/fonts/NotoMono-Regular.ttf"
-
+/* resolved at runtime; see t2g_find_default_font() */
 
 struct _t2gcolor_t {
 	unsigned char a;
@@ -17,40 +15,95 @@ struct _t2gcolor_t {
 typedef struct _t2gcolor_t t2gcolor_t;
 
 struct _t2g_t {
-	t2gcolor_t timeline_color;
-	t2gcolor_t mark_color;
-	char *time_text;
-	char *label_text;
-	
+	/* Canvas */
 	int width;
 	int height;
 
+	/* Timeline line */
+	int timeline_pos_y;
+	t2gcolor_t timeline_color;
+
+	/* Theme */
+	t2gcolor_t theme_background;   /* gradient top */
+	t2gcolor_t theme_background2;  /* gradient bottom */
+	t2gcolor_t theme_accent;       /* dots, line, connector */
+	t2gcolor_t theme_text;         /* label and time text */
+
+	/* Fonts (Pango family names, e.g. "Sans" or "Arial") */
+	char *time_font;
+	int   time_font_size;
+	char *description_font;
+	int   description_font_size;
+
+	/* Animation speed (centiseconds) */
 	int speed_nextitem;
 	int speed_frames;
-	int timeline_pos_y;
 
-	char *time_font;
-	int time_font_size;
-	char *description_font;
-	int description_font_size;
-	
+	/* Layout */
+	int item_spacing;   /* pixels between event x positions (world space) */
+
+	/* Camera */
+	int camera_scroll;  /* boolean: pan to reveal each event */
+
+	/* Transition between events */
+	char *transition_style;   /* "none", "fade", "wipe", "dissolve" */
+	int   transition_frames;  /* number of transition frames (default 8) */
+
+	/* Output */
+	char *output_format;  /* "gif", "webp", "apng" */
+
+	/* Per-event text */
+	char *time_text;
+	char *label_text;
+	t2gcolor_t mark_color;
+
+	/* Per-event color overrides (has_* = 0 → use theme defaults) */
+	int        has_dot_color;
+	t2gcolor_t dot_color;
+	int        has_text_color;
+	t2gcolor_t text_color;
+	int        has_line_color;
+	t2gcolor_t line_color;
+	/* Color of the main timeline line segment leading into this event */
+	int        has_timeline_color;
+	t2gcolor_t ev_timeline_color;
+
+	/* Background gradient override from this event onward (persists until
+	   another event sets a new background). */
+	int        has_ev_background;
+	t2gcolor_t ev_background;    /* gradient top    */
+	t2gcolor_t ev_background2;   /* gradient bottom */
+
+	/* Per-event world-space x position (0 = use sequential default) */
+	int x_pos;
+
+	/* Per-event image to draw instead of the standard dot */
+	char *dot_image;       /* path to PNG or SVG file */
+	int   dot_image_size;  /* icon diameter in pixels (0 = use DOT_RADIUS*4) */
+
 	struct _t2g_t *root;
 	struct _t2g_t *next;
 };
 typedef struct _t2g_t t2g_t;
 
-/* Check parser.y */
+/* Parser interface (see parser.y / lexer.l) */
 void t2g_parser_init(void);
 void t2g_parser_terminate(void);
 void t2grestart(FILE *);
 
-t2g_t *t2g_new();
-int t2g_append(t2g_t *t2g_root, t2g_t *next);
-void t2g_free(t2g_t *timeline);
+t2g_t *t2g_new(void);
+int    t2g_append(t2g_t *t2g_root, t2g_t *next);
+void   t2g_free(t2g_t *timeline);
 
+/* Set the base directory used to resolve relative paths in a .tig file.
+   Call with argv[1] (the .tig path) before parsing. */
+void        t2g_set_basedir(const char *tig_path);
+const char *t2g_get_basedir(void);
+
+char *t2g_find_default_font(void);
 char *t2g_get_description_font(t2g_t *t2g);
-int t2g_get_description_font_size(t2g_t *t2g);
+int   t2g_get_description_font_size(t2g_t *t2g);
 char *t2g_get_time_font(t2g_t *t2g);
-int t2g_get_time_font_size(t2g_t *t2g);
+int   t2g_get_time_font_size(t2g_t *t2g);
 
-#endif // _T2G_H_
+#endif /* _T2G_H_ */

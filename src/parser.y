@@ -1,221 +1,265 @@
 %define api.prefix {t2g}
-%param {t2g_t *timeline}
+%parse-param {t2g_t *timeline}
 
 %{
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include "t2g.h"	
+#include "t2g.h"
 #include <parser.h>
 #include <regex.h>
 
-int t2glex(); 
+int t2glex(void);
 extern void t2gerror(t2g_t *t2g, const char *p);
+char *t2gget_text(void);
+int   t2gget_lineno(void);
 
 regex_t rex_argb;
-t2g_t *t2g_current = NULL;
 
-#define T2G_ABORT return -1;
-#define T2GERROR_VERBOSE
+/* ── Pending per-event settings ───────────────────────────────────────
+   Accumulated before a "time" "label" pair; applied when the item is
+   created, then reset.                                               */
+static struct {
+	int        has_dot_color, has_text_color, has_line_color, has_timeline_color;
+	t2gcolor_t dot_color, text_color, line_color, timeline_color;
+	int        has_ev_background;
+	t2gcolor_t ev_background, ev_background2;
+	int        x_pos;
+	char      *dot_image;
+	int        dot_image_size;
+} pending;
+
+static void pending_reset(void)
+{
+	free(pending.dot_image);
+	memset(&pending, 0, sizeof(pending));
+}
+
+static void pending_apply(t2g_t *ev)
+{
+	if (pending.has_dot_color)      { ev->has_dot_color      = 1; ev->dot_color      = pending.dot_color; }
+	if (pending.has_text_color)     { ev->has_text_color     = 1; ev->text_color     = pending.text_color; }
+	if (pending.has_line_color)     { ev->has_line_color     = 1; ev->line_color     = pending.line_color; }
+	if (pending.has_timeline_color) { ev->has_timeline_color = 1; ev->ev_timeline_color = pending.timeline_color; }
+	if (pending.has_ev_background)  {
+		ev->has_ev_background = 1;
+		ev->ev_background  = pending.ev_background;
+		ev->ev_background2 = pending.ev_background2;
+	}
+	if (pending.x_pos)          { ev->x_pos          = pending.x_pos; }
+	if (pending.dot_image)      { ev->dot_image       = pending.dot_image; pending.dot_image = NULL; }
+	if (pending.dot_image_size) { ev->dot_image_size  = pending.dot_image_size; }
+}
+
+/* ── Color parser ─────────────────────────────────────────────────── */
+static t2gcolor_t parse_argb(const char *str)
+{
+	t2gcolor_t c = {0, 0, 0, 0};
+	regmatch_t pm[5];
+	char buf[4];
+
+	if (regexec(&rex_argb, str, 5, pm, 0) != 0)
+		return c;
+
+	#define EXTRACT(i, field) \
+		memset(buf, 0, sizeof(buf)); \
+		memcpy(buf, str + pm[i].rm_so, pm[i].rm_eo - pm[i].rm_so); \
+		c.field = (unsigned char)strtol(buf, NULL, 10);
+
+	EXTRACT(1, a)
+	EXTRACT(2, r)
+	EXTRACT(3, g)
+	EXTRACT(4, b)
+	#undef EXTRACT
+
+	return c;
+}
 
 %}
 
 %union {
 	char *string;
-	int integer;
+	int   integer;
 }
 
-%token <string>TOK_STRING
-%token <integer>TOK_INTEGER
-%token <string>TOK_WORD
-%token TOK_DOT
-%token <string>TOK_ARGB
+%token <string>  TOK_STRING
+%token <integer> TOK_INTEGER
+%token <string>  TOK_WORD
+%token           TOK_DOT
+%token <string>  TOK_ARGB
+
+%type <string> str_val
 
 %start input
 %%
 
 input:
-      | input setting_str
-      | input setting_argb
-      | input setting_int
-      | input item
-      ;
+	  /* empty */
+	| input setting_str
+	| input setting_argb
+	| input setting_int
+	| input item
+	;
 
-setting_str: TOK_WORD TOK_DOT TOK_WORD TOK_WORD
-      {
+/* Allow both bare words and quoted strings as setting values */
+str_val:
+	  TOK_WORD   { $$ = $1; }
+	| TOK_STRING { $$ = $1; }
+	;
 
-	      if (!strcmp($1, "time")) {
-		      if (!strcmp($3, "font")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->time_font = strdup($4);
-		      }
-	      }
-	      if (!strcmp($1, "description")) {
-		      if (!strcmp($3, "font")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->description_font = strdup($4);
-		      }
-	      }
-	      
-	      free($1);
-	      free($3);
-	      free($4);
-      }
-      ;
+/* ── String settings ─────────────────────────────────────── */
+setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
+	{
+		/* Global settings */
+		if (!strcmp($1, "time") && !strcmp($3, "font")) {
+			free(timeline->time_font);
+			timeline->time_font = strdup($4);
+		} else if (!strcmp($1, "description") && !strcmp($3, "font")) {
+			free(timeline->description_font);
+			timeline->description_font = strdup($4);
+		} else if (!strcmp($1, "camera") && !strcmp($3, "scroll")) {
+			timeline->camera_scroll = (strcmp($4, "no")    != 0 &&
+			                           strcmp($4, "false") != 0 &&
+			                           strcmp($4, "0")     != 0);
+		} else if (!strcmp($1, "output") && !strcmp($3, "format")) {
+			free(timeline->output_format);
+			timeline->output_format = strdup($4);
+		} else if (!strcmp($1, "transition") && !strcmp($3, "style")) {
+			free(timeline->transition_style);
+			timeline->transition_style = strdup($4);
 
+		/* Per-event: image path — resolve relative to the .tig file */
+		} else if (!strcmp($1, "event") && !strcmp($3, "image")) {
+			free(pending.dot_image);
+			if ($4[0] == '/' || $4[0] == '~') {
+				pending.dot_image = strdup($4);
+			} else {
+				char resolved[4096];
+				snprintf(resolved, sizeof(resolved), "%s/%s",
+				         t2g_get_basedir(), $4);
+				pending.dot_image = strdup(resolved);
+			}
+		}
+
+		free($1); free($3); free($4);
+	}
+	;
+
+/* ── ARGB color settings ─────────────────────────────────── */
 setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
-      {
-	      regmatch_t pmatch[5];
-	      int retval;
-	      char A[4] = {0,0,0,0};
-	      char R[4] = {0,0,0,0};
-	      char G[4] = {0,0,0,0};
-	      char B[4] = {0,0,0,0};
-	      unsigned char a,r,g,b;
-	      
-	      retval = regexec(&rex_argb, $4, 5, pmatch, 0);
-	      if (retval) {
-		      fprintf(stderr, "Unexpected no matching for argb!\n");
-		      goto out;
-	      }
+	{
+		t2gcolor_t c = parse_argb($4);
 
-	      for (int i=1;i<=4;i++) {
-		      if ((pmatch[i].rm_eo - pmatch[i].rm_so) > 3) {
-			      fprintf(stderr,"Error parsing number at line %d. Greater than expected!\n", t2gget_lineno());
-			      goto out;
-		      }
-		      switch(i) {
-		      case 1:
-			      memcpy(&A, $4 + pmatch[i].rm_so, pmatch[i].rm_eo - pmatch[i].rm_so);
-			      /* printf("A=%s\n", A); */
-			      break;
-		      case 2:
-			      memcpy(&R, $4 + pmatch[i].rm_so, pmatch[i].rm_eo - pmatch[i].rm_so);
-			      /* printf("R=%s\n", R); */
-			      break;
-		      case 3:
-			      memcpy(&G, $4 + pmatch[i].rm_so, pmatch[i].rm_eo - pmatch[i].rm_so);
-			      /* printf("G=%s\n", G); */
-			      break;
-		      case 4:
-			      memcpy(&B, $4 + pmatch[i].rm_so, pmatch[i].rm_eo - pmatch[i].rm_so);
-			      /* printf("B=%s\n", B); */
-			      break;
-		      default:
-			      fprintf(stderr, "Uh? Should not be there!\n");
-			      goto out;
-			      break;
-		      }
-	      }
-	      a = (unsigned char)strtol(A, NULL, 10);
-	      r = (unsigned char)strtol(R, NULL, 10);
-	      g = (unsigned char)strtol(G, NULL, 10);
-	      b = (unsigned char)strtol(B, NULL, 10);
+		/* Global theme */
+		if (!strcmp($1, "theme")) {
+			if      (!strcmp($3, "background"))  timeline->theme_background  = c;
+			else if (!strcmp($3, "background2")) timeline->theme_background2 = c;
+			else if (!strcmp($3, "accent"))      timeline->theme_accent      = c;
+			else if (!strcmp($3, "text"))        timeline->theme_text        = c;
+		} else if (!strcmp($1, "timeline") && !strcmp($3, "color")) {
+			timeline->timeline_color = c;
+			timeline->theme_accent   = c;
+		} else if (!strcmp($1, "mark") && !strcmp($3, "color")) {
+			timeline->mark_color = c;
 
-	      if (!strcmp($3, "color")) {
-		      if (!strcmp($1, "timeline")) {
-			      /* printf("set timeline\n"); */
-		      } else if (!strcmp($1, "mark")) {
-			      /* printf("set mark\n"); */
-		      } else {
-			      fprintf(stderr, "ERR[%d]: unknown object %s\n", t2gget_lineno(), $1);
-		      }
-	      } else {
-		      fprintf(stderr, "ERR[%d]: argb() function must be set for a color definition\n", t2gget_lineno());
-	      }
-	      
-      out:
-	      free($1);
-	      free($3);
-	      free($4);
-      }
-      ;
+		/* Per-event colors */
+		} else if (!strcmp($1, "event")) {
+			if (!strcmp($3, "dot_color")) {
+				pending.has_dot_color = 1;
+				pending.dot_color = c;
+			} else if (!strcmp($3, "text_color")) {
+				pending.has_text_color = 1;
+				pending.text_color = c;
+			} else if (!strcmp($3, "line_color")) {
+				pending.has_line_color = 1;
+				pending.line_color = c;
+			} else if (!strcmp($3, "timeline_color")) {
+				pending.has_timeline_color = 1;
+				pending.timeline_color = c;
+			} else if (!strcmp($3, "background")) {
+				if (!pending.has_ev_background) {
+					/* default bottom to same unless overridden */
+					pending.ev_background2 = c;
+				}
+				pending.has_ev_background = 1;
+				pending.ev_background = c;
+			} else if (!strcmp($3, "background2")) {
+				pending.has_ev_background = 1;
+				pending.ev_background2 = c;
+			}
+		}
 
+		free($1); free($3); free($4);
+	}
+	;
+
+/* ── Integer settings ────────────────────────────────────── */
 setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
-      {
-	      if (!strcmp($1, "speed")) {
-		      if (!strcmp($3, "nextitem")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->speed_nextitem = $4;
-		      }
-		      if (!strcmp($3, "frames")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->speed_frames = $4;
-		      }
-	      }
+	{
+		/* Global */
+		if (!strcmp($1, "image")) {
+			if      (!strcmp($3, "width"))  timeline->width  = $4;
+			else if (!strcmp($3, "height")) timeline->height = $4;
+		} else if (!strcmp($1, "timeline") && !strcmp($3, "position")) {
+			timeline->timeline_pos_y = $4;
+		} else if (!strcmp($1, "speed")) {
+			if      (!strcmp($3, "frames"))   timeline->speed_frames   = $4;
+			else if (!strcmp($3, "nextitem")) timeline->speed_nextitem = $4;
+		} else if (!strcmp($1, "item")) {
+			if (!strcmp($3, "spacing") || !strcmp($3, "space"))
+				timeline->item_spacing = $4;
+		} else if (!strcmp($1, "time") && !strcmp($3, "font_size")) {
+			timeline->time_font_size = $4;
+		} else if (!strcmp($1, "description") && !strcmp($3, "font_size")) {
+			timeline->description_font_size = $4;
+		} else if (!strcmp($1, "transition") && !strcmp($3, "frames")) {
+			timeline->transition_frames = $4;
 
-	      if (!strcmp($1, "time")) {
-		      if (!strcmp($3, "font_size")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->time_font_size = $4;
-		      }
-	      }
-	      if (!strcmp($1, "description")) {
-		      if (!strcmp($3, "font_size")) {
-			      if (!t2g_current) {
-				      t2g_current = t2g_new();
-			      }	       
-			      t2g_current->description_font_size = $4;
-		      }
-	      }
+		/* Per-event */
+		} else if (!strcmp($1, "event")) {
+			if      (!strcmp($3, "x"))          pending.x_pos          = $4;
+			else if (!strcmp($3, "image_size")) pending.dot_image_size = $4;
+		}
 
-	      
-	      free($1);
-	      free($3);
-      }
-      ;
+		free($1); free($3);
+	}
+	;
 
+/* ── Timeline items ──────────────────────────────────────── */
 item: TOK_STRING TOK_STRING
-       {
-	       if (!t2g_current) {
-		       t2g_current = t2g_new();
-	       }	       
-	       t2g_current->time_text = strdup($1);
-	       t2g_current->label_text = strdup($2);
-
-	       t2g_append(timeline, t2g_current);
-	       t2g_current = NULL;
-	       
-	       free($1);
-	       free($2);
-       }
-       ;
-
+	{
+		t2g_t *ev = t2g_new();
+		ev->time_text  = strdup($1);
+		ev->label_text = strdup($2);
+		pending_apply(ev);
+		pending_reset();
+		t2g_append(timeline, ev);
+		free($1); free($2);
+	}
+	;
 
 %%
 
 void t2g_parser_init(void)
 {
-	int retval;
-	
-	retval = regcomp(&rex_argb, "argb\\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\)", REG_EXTENDED);
-	if (retval) {
-		fprintf(stderr, "Cannot compile regex\n");
-	}
-
+	if (regcomp(&rex_argb,
+	            "argb\\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\)",
+	            REG_EXTENDED) != 0)
+		fprintf(stderr, "Cannot compile argb regex\n");
+	pending_reset();
 }
 
 void t2g_parser_terminate(void)
 {
 	regfree(&rex_argb);
+	pending_reset();
 }
-
-char *t2gget_text(void);
-int t2gget_lineno (void);
 
 void t2gerror(t2g_t *t2g, const char *str)
 {
-	fprintf(stderr, "Parsing error: invalid token '%s' line %d: %s\n", t2gget_text(), t2gget_lineno()+1, str);
+	(void)t2g;
+	fprintf(stderr, "Parse error near '%s' line %d: %s\n",
+	        t2gget_text(), t2gget_lineno() + 1, str);
 	exit(1);
 }

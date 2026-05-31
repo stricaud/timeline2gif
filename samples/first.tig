@@ -1,18 +1,36 @@
-image.height 600
-image.width 800
-timeline.color argb(255,0,0,0)
-timeline.position 500
-time.font_size 20
-description.font_size 8
-mark.color argb(255,0,98,174)
-speed.linedown 6
-speed.textwrite 10
-speed.frames 5
-speed.nextitem 50
-speed.camera 10
-item.space 40
+# Canvas
+image.width  800
+image.height 500
 
-"Jan 2020" "My story!"
+# Theme colors (argb format)
+theme.background  argb(255,22,33,62)
+theme.background2 argb(255,10,25,47)
+theme.accent      argb(255,0,180,216)
+theme.text        argb(255,224,224,224)
+
+# Timeline
+timeline.position 260
+
+# Fonts — Pango family names; use any name installed on your system
+# time.font       Arial
+# description.font "Liberation Sans"
+description.font_size 13
+time.font_size        11
+
+# Speed (centiseconds per frame)
+speed.frames   5
+speed.nextitem 60
+
+# Spacing between events in world space (pixels)
+item.spacing 180
+
+# Camera panning (yes/no)
+camera.scroll yes
+
+# Output format: gif, webp, apng  (also auto-detected from file extension)
+# output.format gif
+
+"Jan 2020" "My story begins!"
 "Feb 2020" "We all went to RSA"
-"Mar 2020" "FIRST was postponed, 
-CanSec went online"
+"Mar 2020" "FIRST postponed, CanSec went online"
+"Jun 2020" "Remote work becomes the norm"

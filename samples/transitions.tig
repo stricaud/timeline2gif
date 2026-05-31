@@ -1,0 +1,90 @@
+# samples/transitions.tig
+# Run from the repository root:
+#   ./build/src/timeline2gif samples/transitions.tig samples/transitions.webp
+#
+# Demonstrates:
+#   • transition.style dissolve   — block-dissolve between events
+#   • event.x                     — real time gaps → fast camera transit
+#   • event.dot_color / text_color / line_color
+#   • event.image (SVG icons)
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  960
+image.height 460
+
+# ── Dark theme with warm accent ─────────────────────────────────────────
+theme.background  argb(255,20,18,28)
+theme.background2 argb(255,12,10,20)
+theme.accent      argb(255,255,140,0)
+theme.text        argb(255,235,228,210)
+
+# ── Timeline ─────────────────────────────────────────────────────────────
+timeline.position 230
+
+# ── Fonts ────────────────────────────────────────────────────────────────
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames   4
+speed.nextitem 60
+camera.scroll  yes
+
+# item.spacing = pixels per time unit.
+# Using 18 px/month → 1 year = 216 px, 6 months = 108 px.
+item.spacing 18
+
+# ── Transition ───────────────────────────────────────────────────────────
+# Try: fade / wipe / dissolve
+transition.style   dissolve
+transition.frames  10
+
+# ── Output ───────────────────────────────────────────────────────────────
+output.format webp
+
+# ════════════════════════════════════════════════════════════════════════
+# Events — x = months_from_origin × 18
+# Origin: Jan 2020 (month 0), so month N → x = N × 18
+# ════════════════════════════════════════════════════════════════════════
+
+# Jan 2020 — month 0 → x = 18 (first item, index+1 × spacing)
+event.dot_color argb(255,255,200,80)
+"Jan 2020" "Program launched"
+
+# Mar 2020 — month 2 → x = 36
+event.x 36
+event.dot_color  argb(255,255,120,60)
+event.line_color argb(255,200,80,40)
+event.text_color argb(255,255,180,140)
+event.image      "icons/warning.svg"
+event.image_size 24
+"Mar 2020" "Pandemic forces pivot"
+
+# Sep 2020 — month 8 → x = 144
+# Gap from Mar (x=36) to Sep (x=144) = 108 px = 6 × 18 → triggers fast transit
+event.x 144
+event.dot_color argb(255,100,220,160)
+"Sep 2020" "Remote-first adopted"
+
+# Jan 2021 — month 12 → x = 216  (1 year from origin)
+# Gap = 72 px = 4 months — normal spacing, no fast transit
+event.x 216
+event.image      "icons/rocket.svg"
+event.image_size 28
+event.dot_color  argb(255,100,180,255)
+"Jan 2021" "Record quarter"
+
+# Jan 2022 — month 24 → x = 432  (2 years from origin)
+# Gap = 216 px = 12 months → large gap → very fast transit
+event.x 432
+event.image      "icons/star.svg"
+event.image_size 28
+event.text_color argb(255,255,230,80)
+"Jan 2022" "Industry award"
+
+# Jul 2022 — month 30 → x = 540  (6 months later)
+event.x 540
+event.image      "icons/flag.svg"
+event.image_size 28
+event.dot_color  argb(255,80,200,120)
+"Jul 2022" "New direction"

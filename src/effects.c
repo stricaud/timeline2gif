@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <gd.h>
 #include <gdfontl.h>
 
@@ -7,17 +8,18 @@
 gdImagePtr effects_center_text(t2g_t *t2g, gdImagePtr im, char *font, int size, int x, int y, int angle, char *text)
 {
 	int brect[8];
-	
-	gdImageStringFT(NULL, brect, 0,
-			font, size,
-			0,
-			0, angle,
-			text);
+	char *err;
+
+	err = gdImageStringFT(NULL, brect, 0, font, size, 0, 0, 0, text);
+	if (err) {
+		fprintf(stderr, "effects_center_text: font error: %s (font=%s)\n", err, font);
+		return im;
+	}
 	int text_width = brect[BRECT_LOWER_RIGHT_X] - brect[BRECT_LOWER_LEFT_X];
 	int text_height = brect[BRECT_LOWER_LEFT_Y] - brect[BRECT_UPPER_LEFT_Y];
 	int text_center_pos_x = text_width / 2;
 	int text_center_pos_y = text_height / 2;
-	
+
 	gdImageStringFT(im, brect, gdTrueColorAlpha(0,0,0,0),
 			font, size,
 			angle,
@@ -31,13 +33,16 @@ gdImagePtr effects_text(t2g_t *t2g, gdImagePtr im, char *font, int size, int x, 
 {
 	int brect[8];
 	int color = gdTrueColorAlpha(0,0,0,0);
+	char *err;
 
-	gdImageStringFTEx(im, brect, color,
+	err = gdImageStringFTEx(im, brect, color,
 			  font, size,
 			  angle,
 			  x, y,
 			  text,
 			  NULL);
+	if (err)
+		fprintf(stderr, "effects_text: font error: %s (font=%s)\n", err, font);
 
 	/* im = gdImageCreatePaletteFromTrueColor(im, 0, 255); */
 	

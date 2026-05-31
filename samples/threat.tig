@@ -1,0 +1,118 @@
+# samples/threat.tig — APT Intrusion Timeline
+# Run from the repository root:
+#   ./build/src/timeline2gif samples/threat.tig samples/threat.gif
+#
+# Demonstrates:
+#   • event.timeline_color — red segment during active attack, green at recovery
+#   • event.dot_color / text_color / line_color — per-event severity colours
+#   • event.image — threat icons replacing dots
+#   • event.x — real hourly positions (fast transit across overnight gap)
+#   • transition.style wipe
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  1000
+image.height 460
+
+# ── Dark security theme ──────────────────────────────────────────────────
+theme.background  argb(255,12,14,22)
+theme.background2 argb(255,7,9,16)
+theme.accent      argb(255,70,130,180)
+theme.text        argb(255,210,215,225)
+
+# ── Timeline ─────────────────────────────────────────────────────────────
+timeline.position 230
+
+# ── Fonts ────────────────────────────────────────────────────────────────
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames   4
+speed.nextitem 65
+camera.scroll  yes
+item.spacing   18        # 1 unit = 1 hour; 18 px/hour
+
+transition.style   wipe
+transition.frames  8
+
+# output.format gif   ← auto-detected from file extension
+
+# ════════════════════════════════════════════════════════════════════════
+# Events — x = hours_from_origin × 18
+# Day 1 08:00 = hour 0, Day 2 08:00 = hour 24, etc.
+# ════════════════════════════════════════════════════════════════════════
+
+# Hour 0 — Phishing email opens a foothold
+event.x              18
+event.image          "icons/skull.svg"
+event.image_size     26
+event.dot_color      argb(255,200,60,60)
+event.text_color     argb(255,255,140,120)
+event.timeline_color argb(255,200,60,60)
+event.background     argb(255,40,10,10)
+event.background2    argb(255,25,6,6)
+"Day 1  08:00" "Phishing email — initial access"
+
+# Hour 2 — Malware beacon established
+event.x              54
+event.dot_color      argb(255,210,80,40)
+event.text_color     argb(255,255,160,120)
+event.line_color     argb(255,180,60,40)
+event.timeline_color argb(255,200,60,60)
+"Day 1  10:00" "C2 beacon established"
+
+# Hour 5 — Credential harvesting
+event.x              108
+event.image          "icons/warning.svg"
+event.image_size     24
+event.dot_color      argb(255,230,130,0)
+event.text_color     argb(255,255,190,80)
+event.timeline_color argb(255,200,100,0)
+"Day 1  13:00" "Credential harvesting"
+
+# Hour 8 — Lateral movement begins (overnight gap follows → fast transit)
+event.x              162
+event.dot_color      argb(255,200,60,180)
+event.text_color     argb(255,220,140,220)
+event.timeline_color argb(255,180,40,160)
+"Day 1  16:00" "Lateral movement detected"
+
+# Hour 28 — Overnight gap: attacker exfiltrates data (Day 2 12:00)
+# gap = 162→504 = 342 px → triggers fast camera transit
+event.x              504
+event.dot_color      argb(255,200,40,40)
+event.text_color     argb(255,255,120,100)
+event.line_color     argb(255,180,30,30)
+event.timeline_color argb(255,180,30,30)
+"Day 2  12:00" "Data exfiltration — 4 GB"
+
+# Hour 32 — SIEM alert fires (Day 2 16:00)
+event.x              576
+event.image          "icons/alert.svg"
+event.image_size     28
+event.dot_color      argb(255,255,200,0)
+event.text_color     argb(255,255,230,80)
+event.line_color     argb(255,200,160,0)
+event.timeline_color argb(255,220,160,0)
+"Day 2  16:00" "SIEM alert — SOC engaged"
+
+# Hour 35 — Attacker access revoked (Day 2 19:00)
+event.x              648
+event.image          "icons/lock.svg"
+event.image_size     26
+event.dot_color      argb(255,60,160,220)
+event.text_color     argb(255,140,200,255)
+event.timeline_color argb(255,60,160,220)
+"Day 2  19:00" "Credentials revoked"
+
+# Hour 40 — Threat contained (Day 3 00:00)
+event.x              738
+event.image          "icons/shield.svg"
+event.image_size     28
+event.dot_color      argb(255,60,180,100)
+event.text_color     argb(255,120,230,150)
+event.line_color     argb(255,40,150,80)
+event.timeline_color argb(255,40,160,80)
+event.background     argb(255,8,25,12)
+event.background2    argb(255,5,15,8)
+"Day 3  00:00" "Threat contained"

@@ -38,7 +38,7 @@ VOID [ \t]+
 ARGB argb\([0-9]+,[0-9]+,[0-9]+,[0-9]+\)
 COMMENT #.*\n
 DOT \.
-WORD [a-zA-Z\-_]+
+WORD [a-zA-Z][a-zA-Z0-9\-_]*
 STRING (\"|\')([^\\(\"|\')]|\\.)*(\"|\')
 
 %%

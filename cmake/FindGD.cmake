@@ -10,6 +10,7 @@
 #  support for image formats in GD.
 
 FIND_PATH(GD_INCLUDE_DIR gd.h
+/opt/homebrew/include
 /usr/local/include
 /usr/include
 )
@@ -27,6 +28,7 @@ FIND_LIBRARY(GD_LIBRARY
 
 IF (GD_LIBRARY AND GD_INCLUDE_DIR)
     SET(GD_LIBRARIES ${GD_LIBRARY})
+    SET(GD_INCLUDE_DIRS ${GD_INCLUDE_DIR})
     SET(GD_FOUND "YES")
 ELSE (GD_LIBRARY AND GD_INCLUDE_DIR)
   SET(GD_FOUND "NO")

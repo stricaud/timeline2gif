@@ -1,0 +1,85 @@
+# samples/custom.tig
+# Run from the repository root:
+#   ./build/src/timeline2gif samples/custom.tig samples/custom.webp
+#
+# Demonstrates:
+#   • Per-event dot color, text color, connector-line color
+#   • Explicit x-position to model real time gaps (event.x)
+#   • SVG icons replacing the standard dot
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  920
+image.height 440
+
+# ── Theme (dark slate with teal accent) ─────────────────────────────────
+theme.background  argb(255,18,26,44)
+theme.background2 argb(255,10,16,30)
+theme.accent      argb(255,56,189,163)
+theme.text        argb(255,220,225,235)
+
+# ── Timeline ─────────────────────────────────────────────────────────────
+timeline.position 220
+
+# ── Fonts ────────────────────────────────────────────────────────────────
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames   4
+speed.nextitem 70
+
+# item.spacing sets the pixel width of one "time unit".
+# Here 1 unit ≈ 1 month, so 12 units = 1 year = 180 px.
+item.spacing 15
+camera.scroll yes
+
+# ── Output ───────────────────────────────────────────────────────────────
+output.format webp
+
+# ════════════════════════════════════════════════════════════════════════
+# Events
+# x positions are in world-space pixels.
+# month N from Jan 2020 → x = N × item.spacing
+# e.g. Jan 2020 = month 1  → x = 15
+#      Jan 2021 = month 13 → x = 195
+#      Jan 2022 = month 25 → x = 375
+# ════════════════════════════════════════════════════════════════════════
+
+# Event 1 — default styling (x = 1 × 15 = 15, i.e. Jan 2020)
+event.x 15
+"Jan 2020" "Project kickoff"
+
+# Event 2 — amber dot, two months later (Mar 2020)
+event.x 45
+event.dot_color argb(255,255,185,0)
+"Mar 2020" "Alpha shipped"
+
+# Event 3 — red warning icon, critical incident (Jun 2020)
+event.x 90
+event.image      "icons/warning.svg"
+event.image_size 26
+event.text_color argb(255,255,120,100)
+event.line_color argb(255,220,60,60)
+"Jun 2020" "Production outage"
+
+# Event 4 — rocket icon, 1 year gap from event 3 (Jun 2021)
+# Default next sequential x would be 105 (7 × 15).
+# Override to 195 to represent Jun 2021 = month 18 from Jan 2020.
+event.x 270
+event.image      "icons/rocket.svg"
+event.image_size 30
+event.dot_color  argb(255,100,180,255)
+"Jun 2021" "Major relaunch"
+
+# Event 5 — gold star icon, award received (Jan 2022 = month 25)
+event.x 375
+event.image      "icons/star.svg"
+event.image_size 28
+event.text_color argb(255,255,220,80)
+"Jan 2022" "Industry award"
+
+# Event 6 — green flag icon, new direction (Jul 2022 = month 31)
+event.x 465
+event.image      "icons/flag.svg"
+event.image_size 28
+"Jul 2022" "New direction announced"
