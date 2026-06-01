@@ -53,6 +53,20 @@ static int connector_dir(int index)
 	return (index % 2 == 0) ? -1 : 1;
 }
 
+/*
+ * Connector length (timeline → label anchor) varies per event so labels
+ * land at different y positions rather than two fixed heights.
+ * Even indices go above, odd below; each side cycles its own sequence.
+ */
+static double connector_h(int index)
+{
+	static const double above[] = { 85, 115, 60, 105, 75 };
+	static const double below[] = { 90, 125, 65, 110, 80 };
+	int group = index / 2;
+	int n     = 5;
+	return (index % 2 == 0) ? above[group % n] : below[group % n];
+}
+
 /* ── Pango text ─────────────────────────────────────────────────────── */
 
 static void draw_text(cairo_t    *cr,
@@ -386,7 +400,7 @@ static void draw_connector(cairo_t *cr,
 
 static void draw_committed_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
                                   int index, double camera_x,
-                                  double label_cx)
+                                  double label_cx, double alpha)
 {
 	double wx    = render_event_world_x(root, ev, index);
 	double sx    = wx - camera_x;
@@ -395,30 +409,24 @@ static void draw_committed_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 
 	if (sx < -DEFAULT_ICON_SIZE || sx > root->width + DEFAULT_ICON_SIZE) return;
 
-	double shelf_y  = ty + dir * CONNECTOR_H;   /* top of vertical connector */
-	double label_y  = shelf_y + dir * 14;        /* label centre y */
-	double time_y   = ty - dir * 20;             /* time string, opposite side */
+	double ch      = connector_h(index);
+	double shelf_y = ty + dir * ch;
+	double label_y = shelf_y + dir * 14;
+	double time_y  = ty - dir * 20;
 
 	t2gcolor_t lc = line_color(root, ev);
 	t2gcolor_t tc = text_color(root, ev);
 
-	/* L-shaped connector */
-	draw_connector(cr, sx, label_cx, ty + dir * DOT_RADIUS, shelf_y, lc, 1.0);
-
-	/* Dot / icon */
-	draw_dot_element(cr, root, ev, sx, ty, 1.0, 1.0);
-
-	/* Label (at pushed position) */
+	draw_connector(cr, sx, label_cx, ty + dir * DOT_RADIUS, shelf_y, lc, alpha);
+	draw_dot_element(cr, root, ev, sx, ty, 1.0, alpha);
 	draw_text(cr, ev->label_text,
 	          t2g_get_description_font(ev),
 	          t2g_get_description_font_size(ev),
-	          label_cx, label_y, tc, 1.0, root->width);
-
-	/* Time (always near the dot, below the timeline) */
+	          label_cx, label_y, tc, alpha, root->width);
 	draw_text(cr, ev->time_text,
 	          t2g_get_time_font(ev),
 	          t2g_get_time_font_size(ev),
-	          sx, time_y, tc, 0.65, root->width);
+	          sx, time_y, tc, 0.65 * alpha, root->width);
 }
 
 /* ── Draw the currently-animating event ─────────────────────────────── */
@@ -433,13 +441,16 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	double ty   = root->timeline_pos_y;
 	int    dir  = connector_dir(index);
 
-	double shelf_y = ty + dir * CONNECTOR_H;
+	double ch      = connector_h(index);
+	double shelf_y = ty + dir * ch;
 	double label_y = shelf_y + dir * 14;
 	double time_y  = ty - dir * 20;
 
 	double dot_t     = ease_out_elastic(clamp01(prog * 2.2));
 	double line_frac = ease_out_cubic(clamp01((prog - 0.20) / 0.45));
-	double text_a    = ease_out_cubic(clamp01((prog - 0.62) / 0.38));
+	/* Text overlaps connector growth (starts at 42% not 62%) for a livelier
+	   sequence, and slides into place from the connector direction. */
+	double text_a    = ease_out_cubic(clamp01((prog - 0.42) / 0.58));
 
 	t2gcolor_t lc = line_color(root, ev);
 	t2gcolor_t tc = text_color(root, ev);
@@ -455,7 +466,7 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 
 	/* L-connector grows in: first vertical, then horizontal */
 	if (line_frac > 0.01) {
-		double grown_shelf = ty + dir * (CONNECTOR_H * line_frac);
+		double grown_shelf = ty + dir * (ch * line_frac);
 		double horiz_cx    = lerp(sx, label_cx, clamp01((line_frac - 0.7) / 0.3));
 		draw_connector(cr, sx, horiz_cx,
 		               ty + dir * DOT_RADIUS, grown_shelf, lc, line_frac);
@@ -464,18 +475,89 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	/* Dot / icon */
 	draw_dot_element(cr, root, ev, sx, ty, dot_t, dot_t);
 
-	/* Text fades in at final position */
+	/* Text slides in from the connector side while fading.
+	   Label drifts from near the timeline outward to its shelf position.
+	   Time drifts away from the timeline to its final position. */
 	if (text_a > 0.01) {
+		double label_slide = 12.0 * (1.0 - text_a);
+		double time_slide  =  6.0 * (1.0 - text_a);
+
 		draw_text(cr, ev->label_text,
 		          t2g_get_description_font(ev),
 		          t2g_get_description_font_size(ev),
-		          label_cx, label_y, tc, text_a, root->width);
+		          label_cx, label_y - dir * label_slide,
+		          tc, text_a, root->width);
 
 		draw_text(cr, ev->time_text,
 		          t2g_get_time_font(ev),
 		          t2g_get_time_font_size(ev),
-		          sx, time_y, tc, text_a * 0.65, root->width);
+		          sx, time_y + dir * time_slide,
+		          tc, text_a * 0.65, root->width);
 	}
+}
+
+/* ── Progress bar ───────────────────────────────────────────────────── */
+
+static void draw_progress_bar(cairo_t *cr, t2g_t *root,
+                               t2g_t *first_event,
+                               int committed_count, int frame)
+{
+	if (!root->progress_show) return;
+
+	int total = 0;
+	for (t2g_t *e = first_event; e; e = e->next) total++;
+	if (total == 0) return;
+
+	double within = (frame >= 0)
+		? ease_out_cubic((double)frame / (FRAMES_PER_ITEM - 1))
+		: 0.0;
+	double progress = clamp01(((double)committed_count + within) / total);
+
+	int    bar_h   = root->progress_height > 0 ? root->progress_height : 4;
+	double mx      = 12.0;
+	double my      = 10.0;
+	double total_w = root->width  - 2.0 * mx;
+	double bar_y   = root->height - my  - (double)bar_h;
+	double fill_w  = total_w * progress;
+
+	t2gcolor_t fill_col  = root->has_progress_color
+		? root->progress_color : root->theme_accent;
+	t2gcolor_t track_col = root->has_progress_background
+		? root->progress_background : fill_col;
+
+	/* Track */
+	cairo_rectangle(cr, mx, bar_y, total_w, bar_h);
+	set_color(cr, track_col, 0.12);
+	cairo_fill(cr);
+
+	if (fill_w < 1.0) return;
+
+	/* Glow halo */
+	cairo_rectangle(cr, mx, bar_y - 2.0, fill_w, (double)bar_h + 4.0);
+	set_color(cr, fill_col, 0.20);
+	cairo_fill(cr);
+
+	/* Solid fill */
+	cairo_rectangle(cr, mx, bar_y, fill_w, (double)bar_h);
+	set_color(cr, fill_col, 0.88);
+	cairo_fill(cr);
+
+	/* Glowing leading-edge cap */
+	double tip_x = mx + fill_w;
+	double tip_y = bar_y + (double)bar_h * 0.5;
+	double tip_r = (double)bar_h * 0.5 + 1.0;
+
+	cairo_arc(cr, tip_x, tip_y, tip_r + 5.0, 0, 2.0 * M_PI);
+	set_color(cr, fill_col, 0.10);
+	cairo_fill(cr);
+
+	cairo_arc(cr, tip_x, tip_y, tip_r + 2.5, 0, 2.0 * M_PI);
+	set_color(cr, fill_col, 0.25);
+	cairo_fill(cr);
+
+	cairo_arc(cr, tip_x, tip_y, tip_r, 0, 2.0 * M_PI);
+	set_color(cr, fill_col, 1.0);
+	cairo_fill(cr);
 }
 
 /* ── Shared render body ─────────────────────────────────────────────── */
@@ -513,15 +595,20 @@ static void render_body(cairo_t *cr, t2g_t *root,
 	double half_w[MAX_LABEL_EVENTS];
 	compute_label_cx(cr, root, first_event, total, camera_x, label_cx, half_w);
 
+	/* Dim previously committed events while a new one is animating in */
+	double committed_alpha = (frame >= 0) ? 0.4 : 1.0;
+
 	/* Draw committed events */
 	t2g_t *iter = first_event;
 	for (int i = 0; i < committed_count && iter; i++, iter = iter->next)
-		draw_committed_event(cr, root, iter, i, camera_x, label_cx[i]);
+		draw_committed_event(cr, root, iter, i, camera_x, label_cx[i], committed_alpha);
 
 	/* Draw animating event (if not a transit frame) */
 	if (frame >= 0 && iter)
 		draw_animating_event(cr, root, iter, current_index, frame, camera_x,
 		                     label_cx[committed_count]);
+
+	draw_progress_bar(cr, root, first_event, committed_count, frame);
 }
 
 /* ── Public API ─────────────────────────────────────────────────────── */
@@ -567,8 +654,8 @@ cairo_surface_t *render_transit_frame(t2g_t *root,
 
 /* ── Transition compositing ─────────────────────────────────────────── */
 
-#define MAX_DISSOLVE_BLOCKS 32768
-#define DISSOLVE_BLOCK_PX   20
+#define MAX_DISSOLVE_BLOCKS 65536
+#define DEFAULT_DISSOLVE_BLOCK_PX 8
 
 static int   _dissolve_order[MAX_DISSOLVE_BLOCKS];
 static int   _dissolve_n = 0;
@@ -589,10 +676,11 @@ static void dissolve_ensure_order(int n)
 }
 
 static void paint_dissolve_blocks(cairo_t *cr, cairo_surface_t *to,
-                                   double t, int w, int h)
+                                   double t, int block_px, int w, int h)
 {
-	int bx = (w + DISSOLVE_BLOCK_PX - 1) / DISSOLVE_BLOCK_PX;
-	int by = (h + DISSOLVE_BLOCK_PX - 1) / DISSOLVE_BLOCK_PX;
+	if (block_px <= 0) block_px = DEFAULT_DISSOLVE_BLOCK_PX;
+	int bx = (w + block_px - 1) / block_px;
+	int by = (h + block_px - 1) / block_px;
 	int total = bx * by;
 	if (total > MAX_DISSOLVE_BLOCKS) total = MAX_DISSOLVE_BLOCKS;
 	int draw = (int)(t * total);
@@ -600,9 +688,9 @@ static void paint_dissolve_blocks(cairo_t *cr, cairo_surface_t *to,
 	for (int k = 0; k < draw; k++) {
 		int b = _dissolve_order[k];
 		cairo_save(cr);
-		cairo_rectangle(cr, (b % bx) * DISSOLVE_BLOCK_PX,
-		                    (b / bx) * DISSOLVE_BLOCK_PX,
-		                    DISSOLVE_BLOCK_PX, DISSOLVE_BLOCK_PX);
+		cairo_rectangle(cr, (b % bx) * block_px,
+		                    (b / bx) * block_px,
+		                    block_px, block_px);
 		cairo_clip(cr);
 		cairo_set_source_surface(cr, to, 0, 0);
 		cairo_paint(cr);
@@ -614,6 +702,7 @@ cairo_surface_t *render_transition_frame(cairo_surface_t *from,
                                           cairo_surface_t *to,
                                           double t,
                                           const char *style,
+                                          int block_size,
                                           int width, int height)
 {
 	cairo_surface_t *out =
@@ -621,7 +710,8 @@ cairo_surface_t *render_transition_frame(cairo_surface_t *from,
 	cairo_t *cr = cairo_create(out);
 
 	int is_wipe     = style && strcmp(style, "wipe")     == 0;
-	int is_dissolve = style && strcmp(style, "dissolve") == 0;
+	int is_dissolve = style && (strcmp(style, "dissolve") == 0 ||
+	                             strcmp(style, "pixelize") == 0);
 
 	if (is_wipe) {
 		cairo_set_source_surface(cr, from, 0, 0); cairo_paint(cr);
@@ -630,7 +720,8 @@ cairo_surface_t *render_transition_frame(cairo_surface_t *from,
 		cairo_set_source_surface(cr, to, 0, 0); cairo_paint(cr);
 	} else if (is_dissolve) {
 		cairo_set_source_surface(cr, from, 0, 0); cairo_paint(cr);
-		paint_dissolve_blocks(cr, to, ease_in_out_cubic(t), width, height);
+		paint_dissolve_blocks(cr, to, ease_in_out_cubic(t),
+		                      block_size, width, height);
 	} else {
 		cairo_set_source_surface(cr, from, 0, 0); cairo_paint(cr);
 		cairo_set_source_surface(cr, to, 0, 0);

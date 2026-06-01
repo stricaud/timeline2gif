@@ -35,9 +35,10 @@ camera.scroll  yes
 item.spacing 18
 
 # ── Transition ───────────────────────────────────────────────────────────
-# Try: fade / wipe / dissolve
-transition.style   dissolve
-transition.frames  10
+# Try: fade / wipe / dissolve / pixelize
+transition.style      dissolve
+transition.frames     20
+transition.block_size 8
 
 # ── Output ───────────────────────────────────────────────────────────────
 output.format webp

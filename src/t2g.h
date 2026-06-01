@@ -46,8 +46,17 @@ struct _t2g_t {
 	int camera_scroll;  /* boolean: pan to reveal each event */
 
 	/* Transition between events */
-	char *transition_style;   /* "none", "fade", "wipe", "dissolve" */
-	int   transition_frames;  /* number of transition frames (default 8) */
+	char *transition_style;    /* "none", "fade", "wipe", "dissolve" */
+	int   transition_frames;   /* number of transition frames (default 8) */
+	int   transition_block_size; /* dissolve block size in pixels (0 = default 8) */
+
+	/* Progress bar overlay */
+	int        progress_show;         /* boolean */
+	int        has_progress_color;
+	t2gcolor_t progress_color;        /* fill / foreground */
+	int        has_progress_background;
+	t2gcolor_t progress_background;   /* track / unfilled */
+	int        progress_height;       /* bar thickness in px (0 → default 4) */
 
 	/* Output */
 	char *output_format;  /* "gif", "webp", "apng" */

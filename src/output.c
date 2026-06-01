@@ -461,13 +461,17 @@ int write_output(t2g_t *root, const char *filename)
 	output_ctx_t   *ctx = output_create(filename, fmt, root->width, root->height);
 	if (!ctx) return 1;
 
+	/* dissolve/pixelize: event appears via block reveal, not elastic bounce */
+	int is_pixelize = transitions_enabled(root) && root->transition_style &&
+		(strcmp(root->transition_style, "dissolve") == 0 ||
+		 strcmp(root->transition_style, "pixelize") == 0);
+	int bsz = root->transition_block_size > 0 ? root->transition_block_size : 0;
+
 	t2g_t *first_event = root->next;
 	t2g_t *iter        = first_event;
 	t2g_t *prev_iter   = NULL;
 	int    event_index = 0;
 
-	/* Start camera already centred on the first event so it never
-	   appears flush against the left edge. */
 	double camera_x_prev = first_event
 		? render_camera_target(root, first_event, 0)
 		: 0.0;
@@ -475,73 +479,115 @@ int write_output(t2g_t *root, const char *filename)
 	while (iter) {
 		double camera_x_target = render_camera_target(root, iter, event_index);
 
-		/* ── Fast-transit frames for large time gaps ───────────────── */
-		double gap     = event_gap(root, prev_iter, event_index - 1,
-		                           iter, event_index);
-		int    transit = transit_frame_count(root, gap);
+		/* ── Pixelize: camera is already at target from the previous
+		      post-reveal pan; reveal the new event then pan forward. ── */
+		if (is_pixelize) {
+			int nf = root->transition_frames;
 
-		for (int tf = 0; tf < transit; tf++) {
-			double t   = ease_in_out_cubic((double)(tf + 1) / (transit + 1));
-			double cam = lerp(camera_x_prev, camera_x_target, t);
-			cairo_surface_t *s = render_transit_frame(
-				root, first_event, event_index, cam);
-			output_add_frame(ctx, s, root->speed_frames * 4);
-			cairo_surface_destroy(s);
-		}
-
-		/* If a transit already moved the camera to target, keep it there
-		   during the event animation (no second pan of the same distance). */
-		double anim_cam_start = (transit > 0) ? camera_x_target : camera_x_prev;
-
-		/* ── Standard event animation frames ──────────────────────── */
-		for (int frame = 0; frame < FRAMES_PER_ITEM; frame++) {
-			cairo_surface_t *surface = render_frame(
-				root, first_event,
-				event_index,    /* committed_count */
-				event_index,    /* current_index   */
-				frame,
-				anim_cam_start,
-				camera_x_target);
-
-			int delay_ms = (frame == FRAMES_PER_ITEM - 1)
-				? root->speed_nextitem * 10
-				: root->speed_frames   * 10;
-
-			output_add_frame(ctx, surface, delay_ms);
-			cairo_surface_destroy(surface);
-		}
-
-		/* ── Transition to next event ──────────────────────────────── */
-		if (iter->next && transitions_enabled(root)) {
-			int    nf          = root->transition_frames;
-			double next_cam    = render_camera_target(root, iter->next,
-			                                          event_index + 1);
-
-			/* "from": committed events at current camera position       */
-			/* "to":   committed events at next event's camera position  */
+			/* Reveal: from = N events (without this one), to = N+1 events.
+			   Same camera position → only the new element pixelizes in. */
 			cairo_surface_t *from = render_transit_frame(
-				root, first_event, event_index + 1, camera_x_target);
+				root, first_event, event_index, camera_x_target);
 			cairo_surface_t *to   = render_transit_frame(
-				root, first_event, event_index + 1, next_cam);
+				root, first_event, event_index + 1, camera_x_target);
 
 			for (int tf = 0; tf < nf; tf++) {
 				double t = (double)(tf + 1) / (nf + 1);
 				cairo_surface_t *trans = render_transition_frame(
 					from, to, t,
-					root->transition_style,
+					root->transition_style, bsz,
 					root->width, root->height);
 				output_add_frame(ctx, trans, root->speed_frames * 10);
 				cairo_surface_destroy(trans);
 			}
-
 			cairo_surface_destroy(from);
 			cairo_surface_destroy(to);
 
-			/* Camera is already at next_cam after the transition;
-			   the next event's animation starts from there. */
-			camera_x_prev = next_cam;
+			/* Hold so the viewer can read the new event */
+			cairo_surface_t *hold = render_transit_frame(
+				root, first_event, event_index + 1, camera_x_target);
+			output_add_frame(ctx, hold, root->speed_nextitem * 10);
+			cairo_surface_destroy(hold);
+
+			/* Post-reveal pan: camera glides to the NEXT event's position
+			   while showing all committed events. This keeps reveals static
+			   and camera movement purposeful (nothing new is added during pan). */
+			if (iter->next && root->camera_scroll) {
+				double next_cam = render_camera_target(root, iter->next,
+				                                       event_index + 1);
+				for (int pf = 0; pf < FRAMES_PER_ITEM; pf++) {
+					double pt  = ease_in_out_cubic((double)(pf + 1) / FRAMES_PER_ITEM);
+					double cam = lerp(camera_x_target, next_cam, pt);
+					cairo_surface_t *s = render_transit_frame(
+						root, first_event, event_index + 1, cam);
+					output_add_frame(ctx, s, root->speed_frames * 10);
+					cairo_surface_destroy(s);
+				}
+				camera_x_prev = next_cam;
+			} else {
+				camera_x_prev = camera_x_target;
+			}
+
+		/* ── Elastic: fast-transit + animation + wipe/fade transition ── */
 		} else {
-			camera_x_prev = camera_x_target;
+			/* Fast-transit frames for large time gaps */
+			double gap     = event_gap(root, prev_iter, event_index - 1,
+			                           iter, event_index);
+			int    transit = transit_frame_count(root, gap);
+
+			for (int tf = 0; tf < transit; tf++) {
+				double t   = ease_in_out_cubic((double)(tf + 1) / (transit + 1));
+				double cam = lerp(camera_x_prev, camera_x_target, t);
+				cairo_surface_t *s = render_transit_frame(
+					root, first_event, event_index, cam);
+				output_add_frame(ctx, s, root->speed_frames * 4);
+				cairo_surface_destroy(s);
+			}
+
+			double anim_cam_start = (transit > 0) ? camera_x_target : camera_x_prev;
+
+			/* Elastic event animation */
+			for (int frame = 0; frame < FRAMES_PER_ITEM; frame++) {
+				cairo_surface_t *surface = render_frame(
+					root, first_event,
+					event_index, event_index, frame,
+					anim_cam_start, camera_x_target);
+
+				int delay_ms = (frame == FRAMES_PER_ITEM - 1)
+					? root->speed_nextitem * 10
+					: root->speed_frames   * 10;
+
+				output_add_frame(ctx, surface, delay_ms);
+				cairo_surface_destroy(surface);
+			}
+
+			/* Wipe / fade: camera-pan transition to next event */
+			if (iter->next && transitions_enabled(root)) {
+				int    nf       = root->transition_frames;
+				double next_cam = render_camera_target(root, iter->next,
+				                                       event_index + 1);
+
+				cairo_surface_t *tfrom = render_transit_frame(
+					root, first_event, event_index + 1, camera_x_target);
+				cairo_surface_t *tto   = render_transit_frame(
+					root, first_event, event_index + 1, next_cam);
+
+				for (int tf = 0; tf < nf; tf++) {
+					double t = (double)(tf + 1) / (nf + 1);
+					cairo_surface_t *trans = render_transition_frame(
+						tfrom, tto, t,
+						root->transition_style, bsz,
+						root->width, root->height);
+					output_add_frame(ctx, trans, root->speed_frames * 10);
+					cairo_surface_destroy(trans);
+				}
+				cairo_surface_destroy(tfrom);
+				cairo_surface_destroy(tto);
+
+				camera_x_prev = next_cam;
+			} else {
+				camera_x_prev = camera_x_target;
+			}
 		}
 
 		prev_iter = iter;

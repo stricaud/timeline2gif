@@ -20,7 +20,7 @@ Generated from [`samples/threat.tig`](samples/threat.tig).*
 | **Real time positions** | Place events at arbitrary x positions to reflect actual time gaps |
 | **Fast transit** | Camera sprints across large time gaps automatically |
 | **Segmented timeline** | Colour the timeline line differently between any two events |
-| **Transitions** | Fade, wipe, or dissolve between events |
+| **Transitions** | Fade, wipe, dissolve, or pixelize between events |
 | **Output formats** | GIF · WebP · APNG |
 
 ---
@@ -71,9 +71,11 @@ speed.nextitem 65
 item.spacing 18
 camera.scroll yes
 
-# Between-event transitions: none | fade | wipe | dissolve
-transition.style   wipe
-transition.frames  8
+# Between-event transitions: none | fade | wipe | dissolve | pixelize
+transition.style      wipe
+transition.frames     16
+# dissolve / pixelize only: pixel block size (smaller = finer grain)
+transition.block_size 8
 
 # Events
 "Day 1  08:00" "Phishing email — initial access"

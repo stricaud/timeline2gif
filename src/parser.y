@@ -125,6 +125,10 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "output") && !strcmp($3, "format")) {
 			free(timeline->output_format);
 			timeline->output_format = strdup($4);
+		} else if (!strcmp($1, "progress") && !strcmp($3, "show")) {
+			timeline->progress_show = (strcmp($4, "no")    != 0 &&
+			                           strcmp($4, "false") != 0 &&
+			                           strcmp($4, "0")     != 0);
 		} else if (!strcmp($1, "transition") && !strcmp($3, "style")) {
 			free(timeline->transition_style);
 			timeline->transition_style = strdup($4);
@@ -162,6 +166,14 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 			timeline->theme_accent   = c;
 		} else if (!strcmp($1, "mark") && !strcmp($3, "color")) {
 			timeline->mark_color = c;
+		} else if (!strcmp($1, "progress")) {
+			if (!strcmp($3, "color")) {
+				timeline->has_progress_color = 1;
+				timeline->progress_color = c;
+			} else if (!strcmp($3, "background")) {
+				timeline->has_progress_background = 1;
+				timeline->progress_background = c;
+			}
 
 		/* Per-event colors */
 		} else if (!strcmp($1, "event")) {
@@ -215,6 +227,10 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			timeline->description_font_size = $4;
 		} else if (!strcmp($1, "transition") && !strcmp($3, "frames")) {
 			timeline->transition_frames = $4;
+		} else if (!strcmp($1, "transition") && !strcmp($3, "block_size")) {
+			timeline->transition_block_size = $4;
+		} else if (!strcmp($1, "progress") && !strcmp($3, "height")) {
+			timeline->progress_height = $4;
 
 		/* Per-event */
 		} else if (!strcmp($1, "event")) {

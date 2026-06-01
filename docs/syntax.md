@@ -231,19 +231,25 @@ Between-event transitions blend the scene smoothly instead of cutting abruptly.
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
-| `transition.style`  | `none` `fade` `wipe` `dissolve` | `none` | Style of transition played after each event's animation |
-| `transition.frames` | integer | `8` | Number of frames the transition takes |
+| `transition.style`      | `none` `fade` `wipe` `dissolve` `pixelize` | `none` | Style of transition played after each event's animation |
+| `transition.frames`     | integer | `8` | Number of frames the transition takes |
+| `transition.block_size` | integer (px) | `8` | Pixel block size for `dissolve` / `pixelize` — smaller = finer grain, smoother look |
 
 | Style | Effect |
 |-------|--------|
-| `none`    | No transition (hard cut to the next state) |
-| `fade`    | Smooth alpha crossfade between old and new scene |
-| `wipe`    | A rectangle sweeps left-to-right, revealing the new scene |
-| `dissolve`| Random 20×20-pixel blocks of the new scene fill in over the old |
+| `none`     | No transition (hard cut to the next state) |
+| `fade`     | Smooth alpha crossfade between old and new scene |
+| `wipe`     | A rectangle sweeps left-to-right, revealing the new scene |
+| `dissolve` | Random pixel blocks of the new scene fill in over the old (same as `pixelize`) |
+| `pixelize` | Alias for `dissolve` |
+
+`transition.block_size` controls how coarse the dissolve/pixelize looks.  
+A value of `4`–`8` gives a fine, film-like grain; `20`+ gives a chunky retro feel.
 
 ```
-transition.style   dissolve
-transition.frames  10
+transition.style      dissolve
+transition.frames     20
+transition.block_size 8     # fine grain — adjust upward for a bolder effect
 ```
 
 ---
@@ -500,8 +506,9 @@ item.spacing  <px>
 camera.scroll  yes | no
 
 # Transitions (between events)
-transition.style   none | fade | wipe | dissolve
-transition.frames  <count>   # default 8
+transition.style      none | fade | wipe | dissolve | pixelize
+transition.frames     <count>   # default 8
+transition.block_size <px>      # dissolve/pixelize block size (default 8)
 
 # Output
 output.format  gif | webp | apng

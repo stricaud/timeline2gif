@@ -32,14 +32,16 @@ cairo_surface_t *render_transit_frame(t2g_t *root,
                                        double camera_x);
 
 /* Composite two frames for a between-event transition.
- *   from, to  - fully rendered source frames (not modified)
- *   t         - progress 0..1
- *   style     - "fade", "wipe", "dissolve"  (NULL/"none" → fade)
+ *   from, to   - fully rendered source frames (not modified)
+ *   t          - progress 0..1
+ *   style      - "fade", "wipe", "dissolve"  (NULL/"none" → fade)
+ *   block_size - pixel size of dissolve blocks (0 → default 8)
  */
 cairo_surface_t *render_transition_frame(cairo_surface_t *from,
                                           cairo_surface_t *to,
                                           double t,
                                           const char *style,
+                                          int block_size,
                                           int width, int height);
 
 #endif /* _T2G_RENDER_H_ */

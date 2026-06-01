@@ -32,8 +32,10 @@ speed.nextitem 65
 camera.scroll  yes
 item.spacing   18        # 1 unit = 1 hour; 18 px/hour
 
-transition.style   wipe
-transition.frames  8
+transition.style   none
+
+# Progress bar (bottom-left)
+progress.show yes
 
 # output.format gif   ← auto-detected from file extension
 
