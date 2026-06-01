@@ -34,10 +34,55 @@ static t2gcolor_t text_color(t2g_t *root, t2g_t *ev)
 
 /* ── Geometry ───────────────────────────────────────────────────────── */
 
+/* Extract a numeric time value from a string using the declared format.
+ *   "year"   — first 4-digit run that looks like a year (1000–9999)
+ *   "number" — first numeric token (integer or decimal, optional leading sign)
+ */
+static double parse_time_value(const char *text, const char *fmt)
+{
+	if (!text || !fmt) return 0.0;
+
+	if (strcmp(fmt, "year") == 0 || strcmp(fmt, "YYYY") == 0) {
+		for (const char *p = text; *p; p++) {
+			if (*p >= '0' && *p <= '9') {
+				int v = 0;
+				const char *q = p;
+				while (*q >= '0' && *q <= '9') v = v * 10 + (*q++ - '0');
+				if (v >= 1000 && v <= 9999) return (double)v;
+				p = q - 1;
+			}
+		}
+	} else if (strcmp(fmt, "number") == 0) {
+		const char *p = text;
+		while (*p && !((*p >= '0' && *p <= '9') || *p == '-' || *p == '.')) p++;
+		if (*p) return atof(p);
+	}
+	return 0.0;
+}
+
 double render_event_world_x(t2g_t *root, t2g_t *ev, int index)
 {
+	/* Explicit per-event override always wins */
 	if (ev && ev->x_pos > 0)
 		return (double)ev->x_pos;
+
+	/* Time-based auto-positioning */
+	if (root->time_format) {
+		double tv = parse_time_value(ev ? ev->time_text : NULL,
+		                             root->time_format);
+
+		/* Origin: explicit value, or auto-detect from first event */
+		double origin = root->has_time_origin
+			? root->time_origin
+			: (root->next
+				? parse_time_value(root->next->time_text, root->time_format)
+				: 0.0);
+
+		/* First event lands at item_spacing; others are proportional */
+		return (tv - origin) * root->item_spacing + root->item_spacing;
+	}
+
+	/* Sequential fallback */
 	return (double)(index + 1) * root->item_spacing;
 }
 
@@ -554,12 +599,22 @@ static void cloud_fill(cairo_t *cr, double cx, double cy, double bw, double bh)
 }
 
 /* Draw the callout overlay (dim + shape + text) on top of whatever is already
-   on `cr`.  fade=0 is fully transparent, fade=1 is fully visible. */
-static void draw_callout(cairo_t *cr, t2g_t *root,
-                          const char *label, const char *time_str,
-                          double fade)
+   on `cr`.
+ *   ev     - event being previewed (provides label/time and per-event effect)
+ *   fade   - overall opacity (0=invisible, 1=full)
+ *   exit_t - 0 during fade-in/hold; eased 0→1 during fade-out for exit effects
+ */
+static void draw_callout(cairo_t *cr, t2g_t *root, t2g_t *ev,
+                          double fade, double exit_t)
 {
 	if (fade <= 0.0) return;
+
+	const char *label    = ev ? ev->label_text : "";
+	const char *time_str = ev ? ev->time_text  : "";
+
+	/* Resolve effect: per-event override beats global setting */
+	const char *effect = (ev && ev->has_ev_callout_effect && ev->ev_callout_effect)
+		? ev->ev_callout_effect : root->callout_effect;
 
 	int    W  = root->width;
 	int    H  = root->height;
@@ -567,6 +622,35 @@ static void draw_callout(cairo_t *cr, t2g_t *root,
 	double cy = H * 0.5;
 	double bw = W * 0.62;
 	double bh = H * 0.30;
+
+	/* ── Exit effect transform ────────────────────────────────────────── */
+	if (exit_t > 0.0 && effect && strcmp(effect, "none") != 0) {
+		double et = ease_in_cubic(exit_t);
+
+		if (strcmp(effect, "funnel") == 0) {
+			/* Contract toward the event dot, which always lands at 40 % of
+			   canvas width (that's how render_camera_target is defined). */
+			double dot_x = W * 0.40;
+			double dot_y = (double)root->timeline_pos_y;
+			cx = lerp(cx, dot_x, et);
+			cy = lerp(cy, dot_y, et);
+			bw = bw * (1.0 - et);
+			bh = bh * (1.0 - et);
+
+		} else if (strcmp(effect, "zoom") == 0) {
+			/* Scale to zero at the centre */
+			bw = bw * (1.0 - et);
+			bh = bh * (1.0 - et);
+
+		} else if (strcmp(effect, "float") == 0) {
+			/* Drift upward and narrow slightly */
+			cy -= bh * 0.60 * et;
+			bw  = bw * (1.0 - et * 0.25);
+		}
+	}
+
+	/* Guard: never render a degenerate shape */
+	if (bw < 2.0 || bh < 2.0) return;
 
 	const char *shape = root->callout_shape;
 	int is_cloud   = shape && strcmp(shape, "cloud")   == 0;
@@ -578,21 +662,19 @@ static void draw_callout(cairo_t *cr, t2g_t *root,
 		? root->callout_border : root->theme_accent;
 	t2gcolor_t text_col = root->theme_text;
 
-	/* Dim the scene behind the callout */
+	/* Dim the scene behind the callout; exit clears dim as shape leaves */
 	cairo_rectangle(cr, 0, 0, W, H);
-	cairo_set_source_rgba(cr, 0, 0, 0, 0.68 * fade);
+	cairo_set_source_rgba(cr, 0, 0, 0, 0.68 * fade * (1.0 - exit_t * 0.7));
 	cairo_fill(cr);
 
 	/* ── Shape ── */
 	if (is_cloud) {
-		/* Outer glow: slightly larger cloud in border colour */
 		cairo_push_group(cr);
 		set_color(cr, bord_col, 1.0);
 		cloud_fill(cr, cx, cy, bw + 20, bh + 12);
 		cairo_pop_group_to_source(cr);
 		cairo_paint_with_alpha(cr, 0.22 * fade);
 
-		/* Solid fill */
 		cairo_push_group(cr);
 		set_color(cr, fill_col, 1.0);
 		cloud_fill(cr, cx, cy, bw, bh);
@@ -603,34 +685,33 @@ static void draw_callout(cairo_t *cr, t2g_t *root,
 		double r = is_rounded ? 20.0 : 0.0;
 		rounded_rect_path(cr, cx - bw * 0.5, cy - bh * 0.5, bw, bh, r);
 
-		/* Outer glow */
 		cairo_set_line_width(cr, 14.0);
 		set_color(cr, bord_col, 0.12 * fade);
 		cairo_stroke_preserve(cr);
 
-		/* Fill */
 		set_color(cr, fill_col, 0.93 * fade);
 		cairo_fill_preserve(cr);
 
-		/* Border */
 		cairo_set_line_width(cr, 1.5);
 		set_color(cr, bord_col, 0.65 * fade);
 		cairo_stroke(cr);
 	}
 
-	/* ── Text ── */
-	int desc_fs = t2g_get_description_font_size(root) + 4;
-	int time_fs = t2g_get_time_font_size(root);
+	/* ── Text — fades out faster than the shape during exit ── */
+	double text_alpha = fade * clamp01(1.0 - exit_t * 2.5);
+	if (text_alpha > 0.01) {
+		int desc_fs = t2g_get_description_font_size(root) + 4;
+		int time_fs = t2g_get_time_font_size(root);
 
-	/* For cloud: push text into the body (below the bumps) */
-	double text_y = cy + (is_cloud ? bh * 0.08 : 0.0)
-	                - (double)(desc_fs + time_fs) * 0.35;
-	double time_y = text_y + desc_fs * 1.30;
+		double text_y = cy + (is_cloud ? bh * 0.08 : 0.0)
+		                - (double)(desc_fs + time_fs) * 0.35;
+		double time_y = text_y + desc_fs * 1.30;
 
-	draw_text(cr, label, t2g_get_description_font(root), desc_fs,
-	          cx, text_y, text_col, fade, W);
-	draw_text(cr, time_str, t2g_get_time_font(root), time_fs,
-	          cx, time_y, text_col, 0.75 * fade, W);
+		draw_text(cr, label, t2g_get_description_font(root), desc_fs,
+		          cx, text_y, text_col, text_alpha, W);
+		draw_text(cr, time_str, t2g_get_time_font(root), time_fs,
+		          cx, time_y, text_col, 0.75 * text_alpha, W);
+	}
 }
 
 /* ── Progress bar ───────────────────────────────────────────────────── */
@@ -794,14 +875,15 @@ cairo_surface_t *render_callout_frame(t2g_t *root,
                                        int    committed_count,
                                        double camera_x,
                                        t2g_t *ev,
-                                       double fade)
+                                       double fade,
+                                       double exit_t)
 {
 	cairo_surface_t *surface =
 		cairo_image_surface_create(CAIRO_FORMAT_ARGB32, root->width, root->height);
 	cairo_t *cr = cairo_create(surface);
 
 	render_body(cr, root, first_event, committed_count, -1, -1, camera_x);
-	draw_callout(cr, root, ev->label_text, ev->time_text, fade);
+	draw_callout(cr, root, ev, fade, exit_t);
 
 	cairo_destroy(cr);
 	return surface;

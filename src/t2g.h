@@ -46,6 +46,17 @@ struct _t2g_t {
 	/* Camera */
 	int camera_scroll;  /* boolean: pan to reveal each event */
 
+	/* Automatic x-positioning from parsed time strings.
+	   When time_format is set, event.x is derived from the event's time
+	   string rather than sequential index.
+	     time.format year    — extract a 4-digit year  (e.g. "Jan 1990" → 1990)
+	     time.format number  — parse the first number  (e.g. "Phase 3" → 3)
+	   time.origin (default 0 = auto from first event): the time value that
+	   maps to world x = item_spacing (i.e. where the first event sits). */
+	char  *time_format;
+	int    has_time_origin;
+	double time_origin;
+
 	/* Transition between events */
 	char *transition_style;    /* "none", "fade", "wipe", "dissolve" */
 	int   transition_frames;   /* number of transition frames (default 8) */
@@ -53,11 +64,16 @@ struct _t2g_t {
 
 	/* Callout overlay — spotlight shown before each event joins the timeline */
 	char      *callout_shape;        /* "rectangle" | "rounded" | "cloud" | NULL=off */
+	char      *callout_effect;       /* exit animation: "none" | "funnel" | "zoom" | "float" */
 	int        callout_pause;        /* hold duration in centiseconds (0 → 200) */
 	int        has_callout_color;
 	t2gcolor_t callout_color;        /* box fill */
 	int        has_callout_border;
 	t2gcolor_t callout_border;       /* border / glow color */
+
+	/* Per-event callout effect override */
+	int        has_ev_callout_effect;
+	char      *ev_callout_effect;
 
 	/* Progress bar overlay */
 	int        progress_show;         /* boolean */

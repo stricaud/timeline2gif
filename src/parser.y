@@ -28,11 +28,13 @@ static struct {
 	int        x_pos;
 	char      *dot_image;
 	int        dot_image_size;
+	char      *callout_effect;   /* per-event callout exit effect override */
 } pending;
 
 static void pending_reset(void)
 {
 	free(pending.dot_image);
+	free(pending.callout_effect);
 	memset(&pending, 0, sizeof(pending));
 }
 
@@ -47,9 +49,14 @@ static void pending_apply(t2g_t *ev)
 		ev->ev_background  = pending.ev_background;
 		ev->ev_background2 = pending.ev_background2;
 	}
-	if (pending.x_pos)          { ev->x_pos          = pending.x_pos; }
-	if (pending.dot_image)      { ev->dot_image       = pending.dot_image; pending.dot_image = NULL; }
-	if (pending.dot_image_size) { ev->dot_image_size  = pending.dot_image_size; }
+	if (pending.x_pos)            { ev->x_pos               = pending.x_pos; }
+	if (pending.dot_image)        { ev->dot_image            = pending.dot_image; pending.dot_image = NULL; }
+	if (pending.dot_image_size)   { ev->dot_image_size       = pending.dot_image_size; }
+	if (pending.callout_effect)   {
+		ev->has_ev_callout_effect = 1;
+		ev->ev_callout_effect     = pending.callout_effect;
+		pending.callout_effect    = NULL;
+	}
 }
 
 /* ── Color parser ─────────────────────────────────────────────────── */
@@ -118,6 +125,9 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "description") && !strcmp($3, "font")) {
 			free(timeline->description_font);
 			timeline->description_font = strdup($4);
+		} else if (!strcmp($1, "time") && !strcmp($3, "format")) {
+			free(timeline->time_format);
+			timeline->time_format = strdup($4);
 		} else if (!strcmp($1, "camera") && !strcmp($3, "scroll")) {
 			timeline->camera_scroll = (strcmp($4, "no")    != 0 &&
 			                           strcmp($4, "false") != 0 &&
@@ -128,6 +138,9 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "callout") && !strcmp($3, "shape")) {
 			free(timeline->callout_shape);
 			timeline->callout_shape = strdup($4);
+		} else if (!strcmp($1, "callout") && !strcmp($3, "effect")) {
+			free(timeline->callout_effect);
+			timeline->callout_effect = strdup($4);
 		} else if (!strcmp($1, "progress") && !strcmp($3, "show")) {
 			timeline->progress_show = (strcmp($4, "no")    != 0 &&
 			                           strcmp($4, "false") != 0 &&
@@ -135,6 +148,11 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "transition") && !strcmp($3, "style")) {
 			free(timeline->transition_style);
 			timeline->transition_style = strdup($4);
+
+		/* Per-event callout exit effect override */
+		} else if (!strcmp($1, "event") && !strcmp($3, "callout_effect")) {
+			free(pending.callout_effect);
+			pending.callout_effect = strdup($4);
 
 		/* Per-event: image path — resolve relative to the .tig file */
 		} else if (!strcmp($1, "event") && !strcmp($3, "image")) {
@@ -230,6 +248,9 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			if      (!strcmp($3, "frames"))     timeline->speed_frames     = $4;
 			else if (!strcmp($3, "nextitem"))   timeline->speed_nextitem   = $4;
 			else if (!strcmp($3, "loop_pause")) timeline->speed_loop_pause = $4;
+		} else if (!strcmp($1, "time") && !strcmp($3, "origin")) {
+			timeline->has_time_origin = 1;
+			timeline->time_origin = (double)$4;
 		} else if (!strcmp($1, "item")) {
 			if (!strcmp($3, "spacing") || !strcmp($3, "space"))
 				timeline->item_spacing = $4;

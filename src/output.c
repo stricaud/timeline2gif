@@ -65,10 +65,18 @@ typedef struct {
 static void gif_add(gif_state_t *s, cairo_surface_t *surface, int delay_ms)
 {
 	gdImagePtr im = surface_to_gd(surface);
-	/* Reduce to 256-colour palette with dithering for better quality */
-	gdImageTrueColorToPalette(im, 1, 256);
+	if (!im) return;
 
-	int delay_cs = delay_ms / 10;  /* GIF delay is in centiseconds */
+	/* Palette quantisation without dithering avoids a libgd edge-case
+	   that triggers a spurious "negative or zero multiplication" warning
+	   on certain image content. Dithering can be re-enabled by changing
+	   the second argument to 1, at the cost of occasional GD warnings. */
+	gdImageTrueColorToPalette(im, 0, 256);
+
+	/* GIF delay is in centiseconds; clamp to valid uint16 range. */
+	int delay_cs = delay_ms / 10;
+	if (delay_cs < 1)     delay_cs = 1;
+	if (delay_cs > 65535) delay_cs = 65535;
 
 	if (!s->started) {
 		gdImageGifAnimBegin(im, s->f, 1, 0);
@@ -464,23 +472,27 @@ static void emit_callout(output_ctx_t *ctx, t2g_t *root,
 		? root->callout_pause * 10 : 2000;
 	int CF = 8;
 
+	/* Fade-in: exit_t = 0 throughout */
 	for (int f = 0; f < CF; f++) {
 		double fade = ease_out_cubic((double)(f + 1) / CF);
 		cairo_surface_t *s = render_callout_frame(
-			root, first_event, event_index, camera_x, ev, fade);
+			root, first_event, event_index, camera_x, ev, fade, 0.0);
 		output_add_frame(ctx, s, root->speed_frames * 10);
 		cairo_surface_destroy(s);
 	}
 
+	/* Hold */
 	cairo_surface_t *hold = render_callout_frame(
-		root, first_event, event_index, camera_x, ev, 1.0);
+		root, first_event, event_index, camera_x, ev, 1.0, 0.0);
 	output_add_frame(ctx, hold, pause_ms);
 	cairo_surface_destroy(hold);
 
+	/* Fade-out with exit effect: exit_t eases from 0 → 1 */
 	for (int f = 0; f < CF; f++) {
-		double fade = ease_out_cubic(1.0 - (double)(f + 1) / CF);
+		double fade   = ease_out_cubic(1.0 - (double)(f + 1) / CF);
+		double exit_t = (double)(f + 1) / CF;   /* draw_callout applies its own easing */
 		cairo_surface_t *s = render_callout_frame(
-			root, first_event, event_index, camera_x, ev, fade);
+			root, first_event, event_index, camera_x, ev, fade, exit_t);
 		output_add_frame(ctx, s, root->speed_frames * 10);
 		cairo_surface_destroy(s);
 	}

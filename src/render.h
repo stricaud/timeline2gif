@@ -32,15 +32,18 @@ cairo_surface_t *render_transit_frame(t2g_t *root,
                                        double camera_x);
 
 /* Render a callout overlay frame: committed events (dimmed) + centred callout box.
- *   ev   - the event being previewed (label and time text are read from it)
- *   fade - 0 = invisible, 1 = fully opaque
+ *   ev     - the event being previewed (label and time text are read from it)
+ *   fade   - 0 = invisible, 1 = fully opaque
+ *   exit_t - 0 during fade-in/hold; 0→1 during fade-out for exit effects
+ *            (funnel / zoom / float — driven by callout.effect setting)
  */
 cairo_surface_t *render_callout_frame(t2g_t *root,
                                        t2g_t *first_event,
                                        int    committed_count,
                                        double camera_x,
                                        t2g_t *ev,
-                                       double fade);
+                                       double fade,
+                                       double exit_t);
 
 /* Composite two frames for a between-event transition.
  *   from, to   - fully rendered source frames (not modified)

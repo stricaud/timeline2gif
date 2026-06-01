@@ -16,7 +16,7 @@ timeline2gif  input.tig  output.apng
 
 The output format is chosen automatically from the file extension.  
 You can also override it explicitly inside the `.tig` file — see
-[`output.format`](#outputformat) below.
+[`output.format`](#output-format) below.
 
 ---
 
@@ -29,8 +29,7 @@ A `.tig` file is a sequence of:
 3. **Events** — pairs of quoted strings `"time" "label"`
 
 Settings can appear in any order before, between, or after events.  
-Unknown settings are silently ignored, so you can add your own comments with
-`# …` freely.
+Unknown settings are silently ignored.
 
 ```
 # This is a comment
@@ -64,14 +63,13 @@ Each component is an integer **0–255**.
 **Examples**
 
 ```
-argb(255, 0, 0, 0)          # opaque black
-argb(255, 255, 255, 255)    # opaque white
-argb(255, 0, 180, 216)      # sky blue (default accent)
-argb(128, 255, 0, 0)        # semi-transparent red
+argb(255,0,0,0)          # opaque black
+argb(255,255,255,255)    # opaque white
+argb(255,0,180,216)      # sky blue (default accent)
+argb(128,255,0,0)        # semi-transparent red
 ```
 
-> Note: the `argb()` literal must have **no spaces** inside the parentheses.  
-> Use `argb(255,0,180,216)` — not `argb(255, 0, 180, 216)`.
+> Note: the `argb()` literal must have **no spaces** inside the parentheses.
 
 ---
 
@@ -84,11 +82,6 @@ argb(128, 255, 0, 0)        # semi-transparent red
 | `image.width` | integer | `800` | Output image width in pixels |
 | `image.height` | integer | `500` | Output image height in pixels |
 
-```
-image.width  1200
-image.height 400
-```
-
 ---
 
 ### Timeline line
@@ -96,45 +89,26 @@ image.height 400
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `timeline.position` | integer | `height / 2` | Y coordinate of the horizontal timeline line |
-| `timeline.color` | argb | same as `theme.accent` | Color of the timeline line (also sets `theme.accent`) |
-
-```
-timeline.position 200       # line sits in the top third
-timeline.color argb(255,0,180,216)
-```
+| `timeline.color` | argb | same as `theme.accent` | Color of the timeline line |
 
 ---
 
 ### Theme
 
-All four theme settings accept an `argb()` color value.
-
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `theme.background`  | `argb(255,22,33,62)`   | Background gradient — top color |
-| `theme.background2` | `argb(255,10,25,47)`   | Background gradient — bottom color |
-| `theme.accent`      | `argb(255,0,180,216)`  | Dots, connector lines, timeline glow |
-| `theme.text`        | `argb(255,224,224,224)`| Label and time text color |
+| `theme.background`  | `argb(255,22,33,62)`    | Background gradient — top color |
+| `theme.background2` | `argb(255,10,25,47)`    | Background gradient — bottom color |
+| `theme.accent`      | `argb(255,0,180,216)`   | Dots, connector lines, timeline glow |
+| `theme.text`        | `argb(255,224,224,224)` | Label and time text color |
 
-The background is always rendered as a vertical gradient from `theme.background`
-(top) to `theme.background2` (bottom).  Set both to the same color for a flat
-background.
-
-```
-# Light theme example
-theme.background  argb(255,245,245,250)
-theme.background2 argb(255,230,232,240)
-theme.accent      argb(255,41,98,255)
-theme.text        argb(255,30,30,40)
-```
+Set both `theme.background` and `theme.background2` to the same color for a flat background.
 
 ---
 
 ### Fonts
 
-Fonts are specified as **Pango font family names** — the same names you would
-use in CSS or a desktop text application.  The font is looked up from the
-system font catalog at render time; no font files are embedded.
+Fonts are specified as **Pango font family names**.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
@@ -143,45 +117,27 @@ system font catalog at render time; no font files are embedded.
 | `time.font` | string | system sans-serif | Font family for time strings |
 | `time.font_size` | integer | `11` | Time font size in points |
 
-Font family names that work on most systems:
-
-| Platform | Reliable choices |
-|----------|-----------------|
-| macOS | `Arial`, `Helvetica Neue`, `Georgia`, `Menlo` |
-| Linux | `Liberation Sans`, `DejaVu Sans`, `FreeSans` |
-| Both | `Sans`, `Serif`, `Monospace` (generic Pango aliases) |
-
-Font names that contain spaces must be **quoted**:
-
-```
-description.font      Arial
-description.font_size 14
-
-time.font      "Liberation Sans"
-time.font_size 11
-```
-
-If neither `time.font` nor `description.font` is set, timeline2gif probes for
-Arial, Liberation Sans, and DejaVu Sans in that order, then falls back to the
-generic Pango family `Sans`.
+Font names with spaces must be quoted: `time.font "Liberation Sans"`
 
 ---
 
 ### Animation speed
 
-Speed values are in **centiseconds** (hundredths of a second).
+Speed values are in **centiseconds** (1 cs = 1/100 s).
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `speed.frames`   | integer | `5`  | Delay between each animation frame (5 cs = 50 ms) |
-| `speed.nextitem` | integer | `50` | Extra hold on the last frame before the next event starts (50 cs = 500 ms) |
+| `speed.frames`     | integer | `5`  | Delay between animation frames |
+| `speed.nextitem`   | integer | `50` | Hold on the last frame of each event before moving to the next |
+| `speed.loop_pause` | integer | `0`  | Extra hold on the very last frame before the animation loops (0 = none) |
 
-Lower values play faster.  A value of `2` for `speed.frames` gives a snappy
-animation; `10` gives a slow, deliberate one.
+`speed.loop_pause` gives viewers time to read the completed timeline before it restarts.
+A value of `1000` (= 10 seconds) is good for dense timelines.
 
 ```
-speed.frames   3    # quick animation
-speed.nextitem 80   # long pause so viewers can read each event
+speed.frames     4
+speed.nextitem   60
+speed.loop_pause 800    # 8-second pause at the end
 ```
 
 ---
@@ -190,14 +146,43 @@ speed.nextitem 80   # long pause so viewers can read each event
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `item.spacing` | integer | `160` | Horizontal distance (px) between consecutive event positions in world space |
+| `item.spacing` | integer | `160` | World-space pixels between consecutive event positions |
 
-Larger values spread events further apart.  When camera scrolling is on, any
-number of events can fit regardless of canvas width.
+---
+
+### Time-based auto-positioning
+
+By default events are spaced evenly at `item.spacing` intervals. Set
+`time.format` to instead derive each event's x position automatically
+from its time string — no `event.x` needed.
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `time.format` | `year` `number` | — (sequential) | How to parse the time string into a numeric value |
+| `time.origin` | integer | auto | Reference time value that maps to x = `item.spacing`; defaults to the first event's parsed value |
+
+| Format | What it parses |
+|--------|---------------|
+| `year`   | First 4-digit number in the range 1000–9999 (e.g. `"Jan 1990"` → `1990`) |
+| `number` | First numeric token in the string (e.g. `"Phase 3"` → `3`) |
 
 ```
-item.spacing 200
+time.format  year
+item.spacing 48          # 48 px per year
+
+"1990" "Project launch"
+"1993" "First milestone"    # placed 3 × 48 = 144 px after the first event
+"2001" "Major release"      # 11 × 48 = 528 px after first event (large gap → fast transit)
 ```
+
+`event.x` always takes precedence over auto-positioning if explicitly set.
+
+**Fast transit for large gaps**
+
+When two consecutive events are more than `3 × item.spacing` apart (whether
+via auto-positioning or explicit `event.x`), the camera performs a brief sprint
+to cross the gap before the next event animates in. This makes large time jumps
+perceptible to the viewer without slowing down the rest of the animation.
 
 ---
 
@@ -205,51 +190,100 @@ item.spacing 200
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
-| `camera.scroll` | `yes` / `no` | `yes` | Pan the viewport to reveal each event as it animates in |
-
-When `yes`, the view smoothly tracks each new event using an ease-in-out curve.
-When `no`, events are rendered at fixed screen positions starting from the left;
-events that exceed the canvas width will be clipped.
-
-```
-camera.scroll yes   # default — recommended for long timelines
-camera.scroll no    # static view — good for 3–4 events that all fit
-```
-
-**Fast transit for large time gaps**
-
-When `event.x` is used to model real time proportions, gaps larger than
-3 × `item.spacing` automatically trigger a fast camera sprint before the dot
-animation starts.  The sprint duration scales with the gap size (2–10 extra
-frames).  No extra configuration is needed — it activates automatically.
+| `camera.scroll` | `yes` / `no` | `yes` | Pan the viewport to each event as it animates in |
 
 ---
 
 ### Transitions
 
-Between-event transitions blend the scene smoothly instead of cutting abruptly.
+Between-event transitions blend the scene instead of cutting abruptly.
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
-| `transition.style`      | `none` `fade` `wipe` `dissolve` `pixelize` | `none` | Style of transition played after each event's animation |
+| `transition.style`      | `none` `fade` `wipe` `dissolve` `pixelize` | `none` | Style played between events |
 | `transition.frames`     | integer | `8` | Number of frames the transition takes |
-| `transition.block_size` | integer (px) | `8` | Pixel block size for `dissolve` / `pixelize` — smaller = finer grain, smoother look |
+| `transition.block_size` | integer (px) | `8` | Block size for `dissolve`/`pixelize` — smaller = finer grain |
 
 | Style | Effect |
 |-------|--------|
-| `none`     | No transition (hard cut to the next state) |
-| `fade`     | Smooth alpha crossfade between old and new scene |
-| `wipe`     | A rectangle sweeps left-to-right, revealing the new scene |
-| `dissolve` | Random pixel blocks of the new scene fill in over the old (same as `pixelize`) |
-| `pixelize` | Alias for `dissolve` |
+| `none`     | Hard cut |
+| `fade`     | Alpha crossfade |
+| `wipe`     | Rectangle sweeps left-to-right |
+| `dissolve` | Random pixel blocks of the new scene fill in (alias: `pixelize`) |
+| `pixelize` | Same as `dissolve` |
 
-`transition.block_size` controls how coarse the dissolve/pixelize looks.  
-A value of `4`–`8` gives a fine, film-like grain; `20`+ gives a chunky retro feel.
+For `dissolve` / `pixelize`, the camera is stationary during the reveal so only
+the new element pixelizes in — previously committed elements remain crisp.
+
+---
+
+### Callout spotlight
+
+A callout displays a centered shape with the event's label *before* the event
+joins the timeline. The shape fades in, pauses, then exits with an animated
+effect.
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `callout.shape`  | `rectangle` `rounded` `cloud` | — (off) | Shape style; setting this enables callouts |
+| `callout.effect` | `none` `funnel` `zoom` `float` | `none` | Exit animation when the callout fades out |
+| `callout.pause`  | integer (cs) | `200` | How long to hold the callout (centiseconds) |
+| `callout.color`  | argb | `theme.background` | Box fill color |
+| `callout.border` | argb | `theme.accent` | Border / glow color |
+
+| Shape | Appearance |
+|-------|-----------|
+| `rectangle` | Sharp-cornered box |
+| `rounded`   | Softly curved box with 20 px corner radius |
+| `cloud`     | Bumpy cloud silhouette with rounded bottom |
+
+| Exit effect | What happens during fade-out |
+|-------------|------------------------------|
+| `none`      | Plain alpha fade, no movement |
+| `funnel`    | Shape contracts toward the event dot on the timeline |
+| `zoom`      | Shape scales to zero at its centre |
+| `float`     | Shape drifts upward while fading |
+
+Per-event override: `event.callout_effect` overrides `callout.effect` for that
+one event, so a single file can showcase multiple exit styles.
 
 ```
-transition.style      dissolve
-transition.frames     20
-transition.block_size 8     # fine grain — adjust upward for a bolder effect
+callout.shape   rounded
+callout.effect  funnel     # default exit for all events
+callout.pause   150        # 1.5 seconds
+callout.color   argb(255,10,14,35)
+callout.border  argb(255,0,210,190)
+
+# This event uses a different exit animation
+event.callout_effect zoom
+"1998" "Google founded"
+
+# Back to the default (funnel)
+"2004" "Facebook launched"
+```
+
+---
+
+### Progress bar
+
+An optional progress bar at the bottom of the canvas shows how far through
+the timeline the animation has progressed.
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `progress.show`       | `yes` / `no` | `no` | Enable the progress bar |
+| `progress.color`      | argb | `theme.accent` | Fill / foreground color |
+| `progress.background` | argb | fill color at 12 % alpha | Track (unfilled) color |
+| `progress.height`     | integer (px) | `4` | Bar thickness |
+
+The bar advances smoothly as each event animates in, using the same easing
+curve as the rest of the animation. A glowing leading-edge cap slides across
+the canvas.
+
+```
+progress.show   yes
+progress.color  argb(255,0,210,190)
+progress.height 5
 ```
 
 ---
@@ -258,223 +292,71 @@ transition.block_size 8     # fine grain — adjust upward for a bolder effect
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
-| `output.format` | `gif` `webp` `apng` | auto | Override the output format regardless of the output filename extension |
+| `output.format` | `gif` `webp` `apng` | auto from extension | Override the output format |
 
-When omitted, the format is detected from the output filename extension
-(`.gif`, `.webp`, `.apng` / `.png`), defaulting to GIF if unrecognised.
-
-```
-output.format webp     # always produce WebP even if the filename ends in .gif
-```
-
-**Format comparison**
-
-| Format | Color depth | Transparency | Typical size | Notes |
-|--------|-------------|--------------|--------------|-------|
-| GIF    | 256 colours per frame | 1-bit | large | universal, but colour-limited; gradients are dithered |
-| WebP   | full colour (24-bit) | full alpha | ~10× smaller than GIF | best quality/size ratio; supported in all modern browsers |
-| APNG   | full colour (24-bit) | full alpha | medium | PNG-compatible; lossless; falls back to static PNG in very old viewers |
+| Format | Color depth | Size | Notes |
+|--------|-------------|------|-------|
+| GIF    | 256 colours per frame | large | Universal compatibility |
+| WebP   | Full colour (24-bit) | ~10× smaller than GIF | Best quality/size ratio; recommended |
+| APNG   | Full colour (24-bit) | medium | Lossless; falls back to static PNG in old viewers |
 
 ---
 
 ## Events
 
-Each event is a pair of **quoted strings** on a single line:
+Each event is a pair of **quoted strings**:
 
 ```
 "time string" "label string"
 ```
 
-The **time string** is displayed near the timeline line in a smaller font.  
-The **label string** is displayed at the end of the connector line in a larger font.
-
-Events appear in the order they are listed in the file.  Consecutive events
-**alternate** above and below the timeline line automatically so that labels
-never overlap:
-
-```
-event 0 → label above the timeline
-event 1 → label below the timeline
-event 2 → label above the timeline
-…
-```
-
-Strings can span multiple lines if you include a newline inside the quotes:
-
-```
-"Mar 2020" "FIRST postponed,
-CanSec went online"
-```
-
-Both single quotes (`'`) and double quotes (`"`) are accepted.  Backslash
-escapes work inside strings:
-
-```
-"Q1 2020" "Revenue up 12\%"
-```
+Events alternate above and below the timeline automatically so labels
+don't overlap. Both single and double quotes are accepted.
 
 ---
 
-## Per-event customization
+## Per-event settings
 
-Any of the following `event.*` settings can appear **immediately before** an
-event's `"time" "label"` line.  They apply only to that one event, then reset
-to defaults for the next one.
+Place any of these **immediately before** an event line. They apply to that
+event only, then reset.
 
 ### Colors
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| `event.dot_color`      | argb | Color of the dot (SVG icons use their own fill colors) |
-| `event.text_color`     | argb | Color of both the label and time text for this event |
-| `event.line_color`     | argb | Color of the vertical connector line |
-| `event.timeline_color` | argb | Color of the **main timeline line segment** leading into this event (from the previous event up to this one); resets to default `theme.accent` for subsequent events |
-| `event.background`     | argb | **New background gradient top color** from this event onward — persists for all subsequent events until another `event.background` overrides it |
-| `event.background2`    | argb | Background gradient bottom color (use with `event.background` for a gradient; if omitted, both stops are the same color) |
+| `event.dot_color`      | argb | Dot / icon accent color |
+| `event.text_color`     | argb | Label and time text color |
+| `event.line_color`     | argb | Connector line color |
+| `event.timeline_color` | argb | Color of the main timeline segment leading into this event |
+| `event.background`     | argb | New background top gradient from this event onward (persists) |
+| `event.background2`    | argb | New background bottom gradient |
 
-`event.timeline_color` lets you highlight a stretch of the timeline — for example, painting it red during an active incident and green once resolved:
-
-```
-# Amber milestone dot with matching connector
-event.dot_color  argb(255,255,185,0)
-event.line_color argb(255,200,140,0)
-"Q2 2020" "Milestone reached"
-
-# Red incident — dot, text, connector, and the line segment all turn red
-event.dot_color      argb(255,220,60,60)
-event.text_color     argb(255,255,140,120)
-event.line_color     argb(255,200,50,50)
-event.timeline_color argb(255,200,60,60)
-"Q3 2020" "Production outage"
-
-# Recovery — green segment from the incident to now
-event.dot_color      argb(255,60,180,100)
-event.timeline_color argb(255,40,160,80)
-"Q4 2020" "Recovery complete"
-# Timeline line returns to theme.accent for subsequent events automatically
-```
-
----
-
-### Custom x position
+### Position
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| `event.x` | integer (px) | Explicit world-space x position, overriding sequential placement |
+| `event.x` | integer (px) | Explicit world-space x position; always overrides auto-positioning |
 
-By default events are placed at `(index + 1) × item.spacing` pixels from the
-origin.  Set `event.x` to break that sequence — for instance to model a real
-time gap.
-
-**Modelling a timeline with real proportions:**
-
-Set `item.spacing` to the pixel width of your base time unit (e.g. 1 month),
-then use `event.x` to place each event at `months_from_start × item.spacing`:
-
-```
-item.spacing 20      # 1 unit = 1 month, so 20 px/month
-
-"Jan 2020" "Start"          # default x = 1 × 20 = 20
-
-event.x 60                  # month 3
-"Mar 2020" "Quick follow-up"
-
-event.x 240                 # month 12 = 1 year later
-"Jan 2021" "Annual review"
-
-event.x 480                 # month 24 = 2 years later
-"Jan 2022" "Expansion"
-```
-
-The camera scrolls smoothly to each event regardless of gap size — it
-accelerates over large gaps and decelerates as it arrives, making the time
-distance perceptible to viewers.
-
----
-
-### Image instead of dot
+### Icon
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `event.image`      | quoted path | — | Path to a PNG or SVG file to draw instead of the standard dot |
-| `event.image_size` | integer (px) | `28` | Diameter of the icon in pixels |
+| `event.image`      | quoted path | — | PNG or SVG to draw instead of the standard dot |
+| `event.image_size` | integer (px) | `28` | Icon diameter |
 
-The image is centered on the timeline position, scaled uniformly to
-`event.image_size` pixels, and plays the same elastic appear animation as a
-normal dot.
+Relative paths are resolved relative to the `.tig` file's own directory.
 
-Both **PNG** and **SVG** files are supported.  SVG files are rendered at full
-vector quality at any size.  File paths that contain `/` or spaces must be
-**quoted**.
+### Callout exit effect
 
-```
-# SVG icon
-event.image      "samples/icons/star.svg"
-event.image_size 28
-"Jan 2022" "Award received"
-
-# PNG icon
-event.image      "icons/logo.png"
-event.image_size 32
-"Mar 2022" "Partnership announced"
-```
-
-> Relative image paths are resolved relative to the **`.tig` file's own
-> directory**, so they work correctly regardless of which directory you run
-> `timeline2gif` from.
-
----
-
-## Complete example
-
-```
-# ── Canvas ──────────────────────────────────────────────────
-image.width  900
-image.height 420
-
-# ── Theme ───────────────────────────────────────────────────
-theme.background  argb(255,15,15,25)
-theme.background2 argb(255,8,10,20)
-theme.accent      argb(255,90,200,250)
-theme.text        argb(255,220,220,230)
-
-# ── Timeline line ────────────────────────────────────────────
-timeline.position 210
-
-# ── Fonts ────────────────────────────────────────────────────
-description.font_size 14
-time.font_size        10
-
-# ── Animation ────────────────────────────────────────────────
-speed.frames   4
-speed.nextitem 70
-item.spacing   200
-camera.scroll  yes
-
-# ── Output ───────────────────────────────────────────────────
-output.format webp
-
-# ── Events ───────────────────────────────────────────────────
-"Jan 2020" "Project kickoff"
-"Mar 2020" "Alpha release"
-"Jun 2020" "Public beta"
-"Sep 2020" "v1.0 shipped"
-```
-
-Run it:
-
-```
-timeline2gif  my-timeline.tig  my-timeline.webp
-```
+| Setting | Values | Description |
+|---------|--------|-------------|
+| `event.callout_effect` | `none` `funnel` `zoom` `float` | Override `callout.effect` for this event only |
 
 ---
 
 ## Quick reference card
 
 ```
-# Comments
-# Any line starting with # is ignored
-
 # Canvas
 image.width   <px>
 image.height  <px>
@@ -484,47 +366,66 @@ timeline.position  <y-px>
 timeline.color     argb(A,R,G,B)
 
 # Theme
-theme.background   argb(A,R,G,B)   # gradient top
-theme.background2  argb(A,R,G,B)   # gradient bottom
-theme.accent       argb(A,R,G,B)   # dots, line, connectors
-theme.text         argb(A,R,G,B)   # all text
+theme.background   argb(A,R,G,B)
+theme.background2  argb(A,R,G,B)
+theme.accent       argb(A,R,G,B)
+theme.text         argb(A,R,G,B)
 
-# Fonts (Pango family names)
+# Fonts
 description.font       FamilyName
 description.font_size  <pt>
 time.font              FamilyName
 time.font_size         <pt>
 
 # Speed (centiseconds = 1/100 s)
-speed.frames    <cs>
-speed.nextitem  <cs>
+speed.frames      <cs>     # per-frame delay
+speed.nextitem    <cs>     # hold after each event
+speed.loop_pause  <cs>     # hold on the final frame before looping
 
 # Layout
 item.spacing  <px>
 
+# Time-based auto-positioning (no event.x needed)
+time.format   year | number
+time.origin   <value>      # reference time → first event; default auto
+
 # Camera
 camera.scroll  yes | no
 
-# Transitions (between events)
+# Transitions
 transition.style      none | fade | wipe | dissolve | pixelize
-transition.frames     <count>   # default 8
-transition.block_size <px>      # dissolve/pixelize block size (default 8)
+transition.frames     <count>
+transition.block_size <px>
+
+# Callout spotlight
+callout.shape   rectangle | rounded | cloud
+callout.effect  none | funnel | zoom | float
+callout.pause   <cs>
+callout.color   argb(A,R,G,B)
+callout.border  argb(A,R,G,B)
+
+# Progress bar
+progress.show        yes | no
+progress.color       argb(A,R,G,B)
+progress.background  argb(A,R,G,B)
+progress.height      <px>
 
 # Output
 output.format  gif | webp | apng
 
-# Events (plain)
-"time label" "description label"
+# Events
+"time" "label"
 
-# Events with per-event overrides (place before the event line; reset after)
-event.dot_color       argb(A,R,G,B)      # dot / icon accent color
-event.text_color      argb(A,R,G,B)      # label + time text color
-event.line_color      argb(A,R,G,B)      # connector line color
-event.timeline_color  argb(A,R,G,B)      # main timeline segment into this event
-event.background      argb(A,R,G,B)      # new background (top gradient) from here on
-event.background2     argb(A,R,G,B)      # new background bottom gradient (optional)
-event.x           <world-px>         # explicit x position (0 = sequential)
-event.image       "path/to/file.svg" # PNG or SVG instead of dot
-event.image_size  <px>               # icon diameter (default 28)
+# Per-event overrides (place immediately before the event line)
+event.dot_color         argb(A,R,G,B)
+event.text_color        argb(A,R,G,B)
+event.line_color        argb(A,R,G,B)
+event.timeline_color    argb(A,R,G,B)
+event.background        argb(A,R,G,B)
+event.background2       argb(A,R,G,B)
+event.x                 <world-px>
+event.image             "path/to/file.svg"
+event.image_size        <px>
+event.callout_effect    none | funnel | zoom | float
 "time" "label"
 ```
