@@ -38,6 +38,7 @@ struct _t2g_t {
 	/* Animation speed (centiseconds) */
 	int speed_nextitem;
 	int speed_frames;
+	int speed_loop_pause;  /* extra hold on the very last frame before looping (0 = none) */
 
 	/* Layout */
 	int item_spacing;   /* pixels between event x positions (world space) */
@@ -49,6 +50,14 @@ struct _t2g_t {
 	char *transition_style;    /* "none", "fade", "wipe", "dissolve" */
 	int   transition_frames;   /* number of transition frames (default 8) */
 	int   transition_block_size; /* dissolve block size in pixels (0 = default 8) */
+
+	/* Callout overlay — spotlight shown before each event joins the timeline */
+	char      *callout_shape;        /* "rectangle" | "rounded" | "cloud" | NULL=off */
+	int        callout_pause;        /* hold duration in centiseconds (0 → 200) */
+	int        has_callout_color;
+	t2gcolor_t callout_color;        /* box fill */
+	int        has_callout_border;
+	t2gcolor_t callout_border;       /* border / glow color */
 
 	/* Progress bar overlay */
 	int        progress_show;         /* boolean */

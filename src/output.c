@@ -455,6 +455,37 @@ static int transitions_enabled(t2g_t *root)
 		&& root->transition_frames > 0;
 }
 
+/* Emit callout fade-in / hold / fade-out frames for one event. */
+static void emit_callout(output_ctx_t *ctx, t2g_t *root,
+                          t2g_t *first_event, int event_index,
+                          double camera_x, t2g_t *ev)
+{
+	int pause_ms = root->callout_pause > 0
+		? root->callout_pause * 10 : 2000;
+	int CF = 8;
+
+	for (int f = 0; f < CF; f++) {
+		double fade = ease_out_cubic((double)(f + 1) / CF);
+		cairo_surface_t *s = render_callout_frame(
+			root, first_event, event_index, camera_x, ev, fade);
+		output_add_frame(ctx, s, root->speed_frames * 10);
+		cairo_surface_destroy(s);
+	}
+
+	cairo_surface_t *hold = render_callout_frame(
+		root, first_event, event_index, camera_x, ev, 1.0);
+	output_add_frame(ctx, hold, pause_ms);
+	cairo_surface_destroy(hold);
+
+	for (int f = 0; f < CF; f++) {
+		double fade = ease_out_cubic(1.0 - (double)(f + 1) / CF);
+		cairo_surface_t *s = render_callout_frame(
+			root, first_event, event_index, camera_x, ev, fade);
+		output_add_frame(ctx, s, root->speed_frames * 10);
+		cairo_surface_destroy(s);
+	}
+}
+
 int write_output(t2g_t *root, const char *filename)
 {
 	output_format_t fmt = output_detect_format(root, filename);
@@ -466,6 +497,9 @@ int write_output(t2g_t *root, const char *filename)
 		(strcmp(root->transition_style, "dissolve") == 0 ||
 		 strcmp(root->transition_style, "pixelize") == 0);
 	int bsz = root->transition_block_size > 0 ? root->transition_block_size : 0;
+
+	int has_callout = root->callout_shape
+		&& strcmp(root->callout_shape, "none") != 0;
 
 	t2g_t *first_event = root->next;
 	t2g_t *iter        = first_event;
@@ -482,6 +516,10 @@ int write_output(t2g_t *root, const char *filename)
 		/* ── Pixelize: camera is already at target from the previous
 		      post-reveal pan; reveal the new event then pan forward. ── */
 		if (is_pixelize) {
+			if (has_callout)
+				emit_callout(ctx, root, first_event, event_index,
+				             camera_x_target, iter);
+
 			int nf = root->transition_frames;
 
 			/* Reveal: from = N events (without this one), to = N+1 events.
@@ -544,7 +582,15 @@ int write_output(t2g_t *root, const char *filename)
 				cairo_surface_destroy(s);
 			}
 
-			double anim_cam_start = (transit > 0) ? camera_x_target : camera_x_prev;
+			/* Callout spotlights the event before it animates onto the timeline.
+			   Camera is snapped to target so the callout appears in context. */
+			if (has_callout)
+				emit_callout(ctx, root, first_event, event_index,
+				             camera_x_target, iter);
+
+			/* When a callout ran, the camera is already at the target. */
+			double anim_cam_start = (transit > 0 || has_callout)
+				? camera_x_target : camera_x_prev;
 
 			/* Elastic event animation */
 			for (int frame = 0; frame < FRAMES_PER_ITEM; frame++) {
@@ -593,6 +639,15 @@ int write_output(t2g_t *root, const char *filename)
 		prev_iter = iter;
 		event_index++;
 		iter = iter->next;
+	}
+
+	/* Final loop-pause: hold the completed timeline for speed.loop_pause cs
+	   so viewers can read the end before the animation restarts. */
+	if (root->speed_loop_pause > 0) {
+		cairo_surface_t *final = render_transit_frame(
+			root, first_event, event_index, camera_x_prev);
+		output_add_frame(ctx, final, root->speed_loop_pause * 10);
+		cairo_surface_destroy(final);
 	}
 
 	int ret = output_finish(ctx);

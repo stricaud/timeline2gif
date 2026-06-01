@@ -29,6 +29,7 @@ run transitions.tig transitions.gif
 run transitions.tig transitions.webp
 run threat.tig      threat.gif
 run threat.tig      threat.webp
+run callout.tig     callout.webp
 
 echo "Done. Output files:"
 ls -lh "$SAMPLES"/*.gif "$SAMPLES"/*.webp 2>/dev/null

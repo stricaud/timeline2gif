@@ -1,0 +1,134 @@
+# samples/callout.tig  — callout spotlight demonstration
+#
+# Before each event joins the timeline, a centred shape fades in to
+# highlight the label, pauses so the viewer can read it, then fades out.
+#
+# Three shapes are available — change the one line below to try each:
+#
+#   callout.shape  rectangle    sharp-cornered box, formal and structured
+#   callout.shape  rounded      softly curved box, modern and friendly
+#   callout.shape  cloud        bumpy cloud silhouette, light and playful
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/callout.tig  samples/callout.webp
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  1000
+image.height 460
+
+# ── Midnight-teal theme ──────────────────────────────────────────────────
+theme.background  argb(255,6,12,28)
+theme.background2 argb(255,3,7,18)
+theme.accent      argb(255,0,210,190)
+theme.text        argb(255,210,240,235)
+
+# ── Layout ───────────────────────────────────────────────────────────────
+timeline.position 230
+
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames     4
+speed.nextitem   60
+speed.loop_pause 1000   # 10-second hold on the final frame before looping
+camera.scroll  yes
+
+# 1 unit = 1 year → 48 px/year.
+# Gaps of 3 years = 144 px, which is clearly readable on screen.
+# Gaps of 5+ years trigger a fast camera sprint (threshold = 3 × 48 = 144 px).
+item.spacing 48
+
+# ── Callout spotlight ────────────────────────────────────────────────────
+# The spotlight uses theme colours by default.  Override with:
+#   callout.color   argb(...)   box fill
+#   callout.border  argb(...)   glow / border colour
+
+callout.shape   cloud
+callout.pause   160           # centiseconds — 1.6 s  (try 80 for snappy, 300 for slow)
+callout.color   argb(255,5,18,38)
+callout.border  argb(255,0,210,190)
+
+# ── Progress bar ─────────────────────────────────────────────────────────
+progress.show   yes
+progress.color  argb(255,0,210,190)
+
+# ════════════════════════════════════════════════════════════════════════
+# Events — x = (year − 1989) × 48
+#
+# Consecutive 3-year gaps  → 144 px apart (no fast transit)
+# 2010 → 2015  (5 years)   → 240 px gap  → fast camera sprint
+# 2015 → 2022  (7 years)   → 336 px gap  → dramatic sprint
+# ════════════════════════════════════════════════════════════════════════
+
+# ── 1990 — (1990−1989)×48 = 48 — sequential first event ─────────────────
+event.dot_color  argb(255,0,210,190)
+event.text_color argb(255,160,255,240)
+"1990" "Tim Berners-Lee proposes the World Wide Web"
+
+# ── 1993 — (1993−1989)×48 = 192  |  gap 144 px ──────────────────────────
+event.x 192
+event.image      "icons/star.svg"
+event.image_size 24
+event.dot_color  argb(255,255,200,80)
+event.text_color argb(255,255,230,140)
+"1993" "Mosaic browser — the Web goes visual"
+
+# ── 1995 — (1995−1989)×48 = 288  |  gap 96 px ───────────────────────────
+event.x 288
+event.dot_color  argb(255,100,180,255)
+event.text_color argb(255,160,210,255)
+"1995" "Amazon · Java · JavaScript launch"
+
+# ── 1998 — (1998−1989)×48 = 432  |  gap 144 px ──────────────────────────
+event.x 432
+event.image      "icons/rocket.svg"
+event.image_size 26
+event.dot_color  argb(255,255,100,100)
+event.text_color argb(255,255,160,160)
+"1998" "Google founded"
+
+# ── 2001 — (2001−1989)×48 = 576  |  gap 144 px ──────────────────────────
+event.x 576
+event.dot_color  argb(255,180,140,255)
+event.text_color argb(255,210,180,255)
+"2001" "Wikipedia — free knowledge for all"
+
+# ── 2004 — (2004−1989)×48 = 720  |  gap 144 px ──────────────────────────
+event.x 720
+event.image      "icons/flag.svg"
+event.image_size 24
+event.dot_color  argb(255,80,160,255)
+event.text_color argb(255,140,200,255)
+"2004" "Facebook · Firefox · Gmail"
+
+# ── 2007 — (2007−1989)×48 = 864  |  gap 144 px ──────────────────────────
+event.x 864
+event.image      "icons/star.svg"
+event.image_size 26
+event.dot_color  argb(255,255,160,60)
+event.text_color argb(255,255,200,120)
+"2007" "iPhone · AWS S3 — cloud era begins"
+
+# ── 2010 — (2010−1989)×48 = 1008  |  gap 144 px ─────────────────────────
+event.x 1008
+event.dot_color  argb(255,255,80,160)
+event.text_color argb(255,255,140,200)
+"2010" "Instagram · iPad · Kubernetes seeds"
+
+# ── 2015 — (2015−1989)×48 = 1248  |  gap 240 px → fast transit ──────────
+event.x 1248
+event.image      "icons/shield.svg"
+event.image_size 26
+event.dot_color  argb(255,60,230,140)
+event.text_color argb(255,120,255,190)
+"2015" "TensorFlow · React Native — AI goes open"
+
+# ── 2022 — (2022−1989)×48 = 1584  |  gap 336 px → dramatic sprint ────────
+event.x 1584
+event.image      "icons/rocket.svg"
+event.image_size 28
+event.dot_color  argb(255,0,210,190)
+event.text_color argb(255,100,255,240)
+event.line_color argb(255,0,180,160)
+"2022" "ChatGPT · generative AI goes mainstream"

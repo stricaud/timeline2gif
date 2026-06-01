@@ -125,6 +125,9 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "output") && !strcmp($3, "format")) {
 			free(timeline->output_format);
 			timeline->output_format = strdup($4);
+		} else if (!strcmp($1, "callout") && !strcmp($3, "shape")) {
+			free(timeline->callout_shape);
+			timeline->callout_shape = strdup($4);
 		} else if (!strcmp($1, "progress") && !strcmp($3, "show")) {
 			timeline->progress_show = (strcmp($4, "no")    != 0 &&
 			                           strcmp($4, "false") != 0 &&
@@ -166,6 +169,14 @@ setting_argb: TOK_WORD TOK_DOT TOK_WORD TOK_ARGB
 			timeline->theme_accent   = c;
 		} else if (!strcmp($1, "mark") && !strcmp($3, "color")) {
 			timeline->mark_color = c;
+		} else if (!strcmp($1, "callout")) {
+			if (!strcmp($3, "color")) {
+				timeline->has_callout_color = 1;
+				timeline->callout_color = c;
+			} else if (!strcmp($3, "border")) {
+				timeline->has_callout_border = 1;
+				timeline->callout_border = c;
+			}
 		} else if (!strcmp($1, "progress")) {
 			if (!strcmp($3, "color")) {
 				timeline->has_progress_color = 1;
@@ -216,8 +227,9 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 		} else if (!strcmp($1, "timeline") && !strcmp($3, "position")) {
 			timeline->timeline_pos_y = $4;
 		} else if (!strcmp($1, "speed")) {
-			if      (!strcmp($3, "frames"))   timeline->speed_frames   = $4;
-			else if (!strcmp($3, "nextitem")) timeline->speed_nextitem = $4;
+			if      (!strcmp($3, "frames"))     timeline->speed_frames     = $4;
+			else if (!strcmp($3, "nextitem"))   timeline->speed_nextitem   = $4;
+			else if (!strcmp($3, "loop_pause")) timeline->speed_loop_pause = $4;
 		} else if (!strcmp($1, "item")) {
 			if (!strcmp($3, "spacing") || !strcmp($3, "space"))
 				timeline->item_spacing = $4;
@@ -229,6 +241,8 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			timeline->transition_frames = $4;
 		} else if (!strcmp($1, "transition") && !strcmp($3, "block_size")) {
 			timeline->transition_block_size = $4;
+		} else if (!strcmp($1, "callout") && !strcmp($3, "pause")) {
+			timeline->callout_pause = $4;
 		} else if (!strcmp($1, "progress") && !strcmp($3, "height")) {
 			timeline->progress_height = $4;
 

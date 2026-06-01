@@ -496,6 +496,143 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	}
 }
 
+/* ── Callout overlay ────────────────────────────────────────────────── */
+
+/* Rounded-rectangle path (r=0 → sharp corners). */
+static void rounded_rect_path(cairo_t *cr,
+                               double x, double y, double w, double h, double r)
+{
+	cairo_new_path(cr);
+	if (r <= 0.0) {
+		cairo_rectangle(cr, x, y, w, h);
+		return;
+	}
+	cairo_arc(cr, x + r,     y + r,     r, M_PI,       M_PI * 1.5);
+	cairo_arc(cr, x + w - r, y + r,     r, M_PI * 1.5, 0.0);
+	cairo_arc(cr, x + w - r, y + h - r, r, 0.0,        M_PI * 0.5);
+	cairo_arc(cr, x + r,     y + h - r, r, M_PI * 0.5, M_PI);
+	cairo_close_path(cr);
+}
+
+/* Fill a cloud silhouette: body with rounded bottom + bump row on top.
+   The body is the same width as the bump span so nothing sticks out.
+   The caller must set the Cairo source before calling. */
+static void cloud_fill(cairo_t *cr, double cx, double cy, double bw, double bh)
+{
+	double bump_r = bh * 0.36;
+	double top_cy = cy - bh * 0.16;   /* bump row centre */
+
+	int    n    = (int)((bw * 0.82) / (bump_r * 1.25)) + 1;
+	if (n < 3) n = 3;
+	double span  = bw * 0.82 - 2.0 * bump_r;
+	double step  = (n > 1) ? span / (n - 1) : 0.0;
+	double x0    = cx - span * 0.5;
+
+	/* Body: exact same width as the bump span, only bottom corners rounded. */
+	double bx      = x0 - bump_r;
+	double bw_body = span + 2.0 * bump_r;
+	double by      = top_cy;                      /* starts at bump centres */
+	double bh_body = (cy + bh * 0.46) - by;
+	double cr_r    = bh_body * 0.38;              /* bottom corner radius */
+
+	cairo_new_path(cr);
+	cairo_move_to(cr, bx, by);
+	cairo_line_to(cr, bx + bw_body, by);
+	cairo_line_to(cr, bx + bw_body, by + bh_body - cr_r);
+	cairo_arc(cr, bx + bw_body - cr_r, by + bh_body - cr_r, cr_r, 0.0, M_PI * 0.5);
+	cairo_arc(cr, bx + cr_r,           by + bh_body - cr_r, cr_r, M_PI * 0.5, M_PI);
+	cairo_line_to(cr, bx, by);
+	cairo_close_path(cr);
+	cairo_fill(cr);
+
+	/* Bump row drawn on top — upper hemispheres stick above the body,
+	   lower halves overlap and cover the body's flat top edge. */
+	for (int i = 0; i < n; i++) {
+		cairo_arc(cr, x0 + i * step, top_cy, bump_r, 0, 2 * M_PI);
+		cairo_fill(cr);
+	}
+}
+
+/* Draw the callout overlay (dim + shape + text) on top of whatever is already
+   on `cr`.  fade=0 is fully transparent, fade=1 is fully visible. */
+static void draw_callout(cairo_t *cr, t2g_t *root,
+                          const char *label, const char *time_str,
+                          double fade)
+{
+	if (fade <= 0.0) return;
+
+	int    W  = root->width;
+	int    H  = root->height;
+	double cx = W * 0.5;
+	double cy = H * 0.5;
+	double bw = W * 0.62;
+	double bh = H * 0.30;
+
+	const char *shape = root->callout_shape;
+	int is_cloud   = shape && strcmp(shape, "cloud")   == 0;
+	int is_rounded = shape && strcmp(shape, "rounded") == 0;
+
+	t2gcolor_t fill_col = root->has_callout_color
+		? root->callout_color : root->theme_background;
+	t2gcolor_t bord_col = root->has_callout_border
+		? root->callout_border : root->theme_accent;
+	t2gcolor_t text_col = root->theme_text;
+
+	/* Dim the scene behind the callout */
+	cairo_rectangle(cr, 0, 0, W, H);
+	cairo_set_source_rgba(cr, 0, 0, 0, 0.68 * fade);
+	cairo_fill(cr);
+
+	/* ── Shape ── */
+	if (is_cloud) {
+		/* Outer glow: slightly larger cloud in border colour */
+		cairo_push_group(cr);
+		set_color(cr, bord_col, 1.0);
+		cloud_fill(cr, cx, cy, bw + 20, bh + 12);
+		cairo_pop_group_to_source(cr);
+		cairo_paint_with_alpha(cr, 0.22 * fade);
+
+		/* Solid fill */
+		cairo_push_group(cr);
+		set_color(cr, fill_col, 1.0);
+		cloud_fill(cr, cx, cy, bw, bh);
+		cairo_pop_group_to_source(cr);
+		cairo_paint_with_alpha(cr, 0.93 * fade);
+
+	} else {
+		double r = is_rounded ? 20.0 : 0.0;
+		rounded_rect_path(cr, cx - bw * 0.5, cy - bh * 0.5, bw, bh, r);
+
+		/* Outer glow */
+		cairo_set_line_width(cr, 14.0);
+		set_color(cr, bord_col, 0.12 * fade);
+		cairo_stroke_preserve(cr);
+
+		/* Fill */
+		set_color(cr, fill_col, 0.93 * fade);
+		cairo_fill_preserve(cr);
+
+		/* Border */
+		cairo_set_line_width(cr, 1.5);
+		set_color(cr, bord_col, 0.65 * fade);
+		cairo_stroke(cr);
+	}
+
+	/* ── Text ── */
+	int desc_fs = t2g_get_description_font_size(root) + 4;
+	int time_fs = t2g_get_time_font_size(root);
+
+	/* For cloud: push text into the body (below the bumps) */
+	double text_y = cy + (is_cloud ? bh * 0.08 : 0.0)
+	                - (double)(desc_fs + time_fs) * 0.35;
+	double time_y = text_y + desc_fs * 1.30;
+
+	draw_text(cr, label, t2g_get_description_font(root), desc_fs,
+	          cx, text_y, text_col, fade, W);
+	draw_text(cr, time_str, t2g_get_time_font(root), time_fs,
+	          cx, time_y, text_col, 0.75 * fade, W);
+}
+
 /* ── Progress bar ───────────────────────────────────────────────────── */
 
 static void draw_progress_bar(cairo_t *cr, t2g_t *root,
@@ -647,6 +784,24 @@ cairo_surface_t *render_transit_frame(t2g_t *root,
 	cairo_t *cr = cairo_create(surface);
 
 	render_body(cr, root, first_event, committed_count, -1, -1, camera_x);
+
+	cairo_destroy(cr);
+	return surface;
+}
+
+cairo_surface_t *render_callout_frame(t2g_t *root,
+                                       t2g_t *first_event,
+                                       int    committed_count,
+                                       double camera_x,
+                                       t2g_t *ev,
+                                       double fade)
+{
+	cairo_surface_t *surface =
+		cairo_image_surface_create(CAIRO_FORMAT_ARGB32, root->width, root->height);
+	cairo_t *cr = cairo_create(surface);
+
+	render_body(cr, root, first_event, committed_count, -1, -1, camera_x);
+	draw_callout(cr, root, ev->label_text, ev->time_text, fade);
 
 	cairo_destroy(cr);
 	return surface;
