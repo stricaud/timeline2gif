@@ -14,6 +14,13 @@
 #include "easing.h"
 #include "t2g.h"
 
+/* Resolve per-event hold in milliseconds:
+   event.pause → speed.pause → speed.nextitem */
+#define EVENT_HOLD_MS(root, ev) \
+	( (ev)->has_event_pause  ? (ev)->event_pause  * 10 : \
+	  (root)->has_speed_pause ? (root)->speed_pause * 10 : \
+	                            (root)->speed_nextitem * 10 )
+
 /* ═══════════════════════════════════════════════════════════════════════
    Cairo surface → GD TrueColor image
    ═══════════════════════════════════════════════════════════════════════ */
@@ -556,7 +563,7 @@ int write_output(t2g_t *root, const char *filename)
 			/* Hold so the viewer can read the new event */
 			cairo_surface_t *hold = render_transit_frame(
 				root, first_event, event_index + 1, camera_x_target);
-			output_add_frame(ctx, hold, root->speed_nextitem * 10);
+			output_add_frame(ctx, hold, EVENT_HOLD_MS(root, iter));
 			cairo_surface_destroy(hold);
 
 			/* Post-reveal pan: camera glides to the NEXT event's position
@@ -612,8 +619,8 @@ int write_output(t2g_t *root, const char *filename)
 					anim_cam_start, camera_x_target);
 
 				int delay_ms = (frame == FRAMES_PER_ITEM - 1)
-					? root->speed_nextitem * 10
-					: root->speed_frames   * 10;
+					? EVENT_HOLD_MS(root, iter)
+					: root->speed_frames * 10;
 
 				output_add_frame(ctx, surface, delay_ms);
 				cairo_surface_destroy(surface);

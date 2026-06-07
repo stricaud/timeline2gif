@@ -39,6 +39,8 @@ struct _t2g_t {
 	int speed_nextitem;
 	int speed_frames;
 	int speed_loop_pause;  /* extra hold on the very last frame before looping (0 = none) */
+	int has_speed_pause;
+	int speed_pause;       /* global per-event hold; overrides speed_nextitem; overridden by event.pause */
 
 	/* Layout */
 	int item_spacing;   /* pixels between event x positions (world space) */
@@ -110,6 +112,10 @@ struct _t2g_t {
 
 	/* Per-event world-space x position (0 = use sequential default) */
 	int x_pos;
+
+	/* Per-event hold duration override (centiseconds; 0 = use speed.nextitem) */
+	int has_event_pause;
+	int event_pause;
 
 	/* Per-event image to draw instead of the standard dot */
 	char *dot_image;       /* path to PNG or SVG file */

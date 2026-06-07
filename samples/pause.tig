@@ -1,0 +1,75 @@
+# samples/pause.tig — per-event pause demonstration
+#
+# speed.pause sets the default hold after every event.
+# event.pause overrides it for a single event.
+#
+# Here a software release pipeline uses short pauses for quick steps
+# and longer pauses where the viewer needs more reading time.
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/pause.tig  samples/pause.webp
+
+# ── Canvas ───────────────────────────────────────────────────────────────
+image.width  1000
+image.height 460
+
+# ── Theme — deep indigo ──────────────────────────────────────────────────
+theme.background  argb(255,14,16,36)
+theme.background2 argb(255,8,10,22)
+theme.accent      argb(255,120,160,255)
+theme.text        argb(255,210,218,240)
+
+# ── Layout ───────────────────────────────────────────────────────────────
+timeline.position 230
+
+description.font_size 13
+time.font_size        11
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames     4
+speed.pause      80     # default hold: 0.8 s — comfortable for short labels
+speed.loop_pause 300    # 3-second pause on the final frame before looping
+camera.scroll    yes
+
+item.spacing 160
+
+# ── Progress bar ─────────────────────────────────────────────────────────
+progress.show   yes
+progress.color  argb(255,120,160,255)
+
+# ════════════════════════════════════════════════════════════════════════
+# Events — pause durations vary to match how long each step takes to read
+# ════════════════════════════════════════════════════════════════════════
+
+# Quick steps: use the global speed.pause (0.8 s)
+event.dot_color  argb(255,100,200,120)
+event.text_color argb(255,160,230,180)
+"01  Code review" "PR approved"
+
+event.dot_color  argb(255,100,200,120)
+event.text_color argb(255,160,230,180)
+"02  CI pipeline" "All tests green"
+
+# Normal step — slightly longer so the viewer can read the build number
+event.pause 120
+event.dot_color  argb(255,120,160,255)
+event.text_color argb(255,180,205,255)
+"03  Build" "Artifact v2.4.1 packaged"
+
+# Staging deploy — more detail, give more time
+event.pause 200
+event.dot_color  argb(255,200,160,80)
+event.text_color argb(255,235,210,140)
+"04  Staging deploy" "Smoke tests pass on staging"
+
+# Back to a quick step
+event.dot_color  argb(255,100,200,120)
+event.text_color argb(255,160,230,180)
+"05  Approval" "Release signed off"
+
+# Production deploy — most important step, hold longest
+event.pause 400
+event.dot_color  argb(255,255,100,100)
+event.text_color argb(255,255,170,160)
+event.line_color argb(255,220,80,80)
+"06  Production" "v2.4.1 live — deploy complete"

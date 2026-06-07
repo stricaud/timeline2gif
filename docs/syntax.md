@@ -128,7 +128,8 @@ Speed values are in **centiseconds** (1 cs = 1/100 s).
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `speed.frames`     | integer | `5`  | Delay between animation frames |
-| `speed.nextitem`   | integer | `50` | Hold on the last frame of each event before moving to the next |
+| `speed.nextitem`   | integer | `50` | Hold after each event (base default) |
+| `speed.pause`      | integer | —    | Per-event hold default; overrides `speed.nextitem`; overridden by `event.pause` |
 | `speed.loop_pause` | integer | `0`  | Extra hold on the very last frame before the animation loops (0 = none) |
 
 `speed.loop_pause` gives viewers time to read the completed timeline before it restarts.
@@ -331,11 +332,12 @@ event only, then reset.
 | `event.background`     | argb | New background top gradient from this event onward (persists) |
 | `event.background2`    | argb | New background bottom gradient |
 
-### Position
+### Position and timing
 
 | Setting | Type | Description |
 |---------|------|-------------|
-| `event.x` | integer (px) | Explicit world-space x position; always overrides auto-positioning |
+| `event.x`     | integer (px) | Explicit world-space x position; always overrides auto-positioning |
+| `event.pause` | integer (cs) | Hold duration after this event animates in; overrides `speed.nextitem` |
 
 ### Icon
 
@@ -379,7 +381,8 @@ time.font_size         <pt>
 
 # Speed (centiseconds = 1/100 s)
 speed.frames      <cs>     # per-frame delay
-speed.nextitem    <cs>     # hold after each event
+speed.nextitem    <cs>     # hold after each event (base default)
+speed.pause       <cs>     # per-event hold default (overrides speed.nextitem)
 speed.loop_pause  <cs>     # hold on the final frame before looping
 
 # Layout
@@ -424,6 +427,7 @@ event.timeline_color    argb(A,R,G,B)
 event.background        argb(A,R,G,B)
 event.background2       argb(A,R,G,B)
 event.x                 <world-px>
+event.pause             <cs>
 event.image             "path/to/file.svg"
 event.image_size        <px>
 event.callout_effect    none | funnel | zoom | float

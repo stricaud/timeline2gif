@@ -26,6 +26,8 @@ static struct {
 	int        has_ev_background;
 	t2gcolor_t ev_background, ev_background2;
 	int        x_pos;
+	int        has_event_pause;
+	int        event_pause;
 	char      *dot_image;
 	int        dot_image_size;
 	char      *callout_effect;   /* per-event callout exit effect override */
@@ -50,6 +52,7 @@ static void pending_apply(t2g_t *ev)
 		ev->ev_background2 = pending.ev_background2;
 	}
 	if (pending.x_pos)            { ev->x_pos               = pending.x_pos; }
+	if (pending.has_event_pause)  { ev->has_event_pause = 1; ev->event_pause = pending.event_pause; }
 	if (pending.dot_image)        { ev->dot_image            = pending.dot_image; pending.dot_image = NULL; }
 	if (pending.dot_image_size)   { ev->dot_image_size       = pending.dot_image_size; }
 	if (pending.callout_effect)   {
@@ -248,6 +251,8 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			if      (!strcmp($3, "frames"))     timeline->speed_frames     = $4;
 			else if (!strcmp($3, "nextitem"))   timeline->speed_nextitem   = $4;
 			else if (!strcmp($3, "loop_pause")) timeline->speed_loop_pause = $4;
+			else if (!strcmp($3, "pause"))    { timeline->has_speed_pause  = 1;
+			                                    timeline->speed_pause      = $4; }
 		} else if (!strcmp($1, "time") && !strcmp($3, "origin")) {
 			timeline->has_time_origin = 1;
 			timeline->time_origin = (double)$4;
@@ -271,6 +276,7 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 		} else if (!strcmp($1, "event")) {
 			if      (!strcmp($3, "x"))          pending.x_pos          = $4;
 			else if (!strcmp($3, "image_size")) pending.dot_image_size = $4;
+			else if (!strcmp($3, "pause"))    { pending.has_event_pause = 1; pending.event_pause = $4; }
 		}
 
 		free($1); free($3);
