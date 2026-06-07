@@ -42,6 +42,12 @@ struct _t2g_t {
 	int has_speed_pause;
 	int speed_pause;       /* global per-event hold; overrides speed_nextitem; overridden by event.pause */
 
+	/* Split-screen: left panel lists all events, right panel shows animation */
+	int split_show;
+	int split_width;       /* left panel width in pixels (default 260) */
+	int has_split_bg;
+	t2gcolor_t split_bg;   /* panel fill color (default: theme.background) */
+
 	/* Layout */
 	int item_spacing;   /* pixels between event x positions (world space) */
 

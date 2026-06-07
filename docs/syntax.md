@@ -265,6 +265,41 @@ event.callout_effect zoom
 
 ---
 
+### Split-screen layout
+
+Split-screen mode divides the canvas into two regions: a **left panel** listing
+all events as bullet points, and a **right panel** showing the animated timeline.
+
+As the animation plays, past events appear at normal brightness, the current
+event is highlighted with a glowing bullet and an accent bar, and future events
+are dimmed. The camera and progress bar automatically confine themselves to the
+right panel.
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `split.show`       | `yes` / `no` | `no`  | Enable the split-screen panel |
+| `split.width`      | integer (px) | `260` | Width of the left panel |
+| `split.background` | argb | `theme.background` | Panel fill color |
+
+```
+split.show        yes
+split.width       280
+split.background  argb(255,10,12,20)   # optional — darker than main bg
+```
+
+**Tips**
+
+- Widen the canvas by `split.width` to keep the animation area the same size as
+  a non-split file (e.g. add 260 px to `image.width`).
+- The panel shows the event `time` string above the label when rows are tall
+  enough; increase `image.height` or reduce the number of events if rows feel
+  cramped.
+- `split.background` is useful when the panel and main background colours are
+  too similar — pick a slightly darker or lighter shade to create a clear visual
+  boundary.
+
+---
+
 ### Progress bar
 
 An optional progress bar at the bottom of the canvas shows how far through
@@ -406,6 +441,11 @@ callout.effect  none | funnel | zoom | float
 callout.pause   <cs>
 callout.color   argb(A,R,G,B)
 callout.border  argb(A,R,G,B)
+
+# Split-screen panel
+split.show        yes | no
+split.width       <px>
+split.background  argb(A,R,G,B)
 
 # Progress bar
 progress.show        yes | no

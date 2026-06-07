@@ -1,0 +1,117 @@
+# samples/split.tig — split-screen layout demonstration
+#
+# The canvas is divided: a left panel lists all events as bullet points
+# (future events dimmed, the current one highlighted), while the right
+# side shows the animated timeline as usual.
+#
+# Settings:
+#   split.show        yes / no       — enable the panel
+#   split.width       <px>           — panel width (default 260)
+#   split.background  argb(A,R,G,B)  — panel fill (default: theme.background)
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/split.tig  samples/split.webp
+
+# ── Canvas ───────────────────────────────────────────────────────────────
+image.width  1100
+image.height 460
+
+# ── Dark security theme ──────────────────────────────────────────────────
+theme.background  argb(255,12,14,22)
+theme.background2 argb(255,7,9,16)
+theme.accent      argb(255,70,130,180)
+theme.text        argb(255,210,215,225)
+
+# ── Timeline ─────────────────────────────────────────────────────────────
+timeline.position 230
+
+# ── Fonts ─────────────────────────────────────────────────────────────────
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames   4
+speed.nextitem 80
+speed.loop_pause 300
+camera.scroll  yes
+item.spacing   18        # 1 unit = 1 hour; 18 px/hour
+
+transition.style none
+
+# ── Split-screen panel ───────────────────────────────────────────────────
+split.show  yes
+split.width 260
+
+# ── Progress bar ─────────────────────────────────────────────────────────
+progress.show yes
+
+# ════════════════════════════════════════════════════════════════════════
+# Events — same APT intrusion scenario as threat.tig
+# ════════════════════════════════════════════════════════════════════════
+
+event.x              18
+event.image          "icons/skull.svg"
+event.image_size     26
+event.dot_color      argb(255,200,60,60)
+event.text_color     argb(255,255,140,120)
+event.timeline_color argb(255,200,60,60)
+event.background     argb(255,40,10,10)
+event.background2    argb(255,25,6,6)
+"Day 1  08:00" "Phishing email — initial access"
+
+event.x              54
+event.dot_color      argb(255,210,80,40)
+event.text_color     argb(255,255,160,120)
+event.line_color     argb(255,180,60,40)
+event.timeline_color argb(255,200,60,60)
+"Day 1  10:00" "C2 beacon established"
+
+event.x              108
+event.image          "icons/warning.svg"
+event.image_size     24
+event.dot_color      argb(255,230,130,0)
+event.text_color     argb(255,255,190,80)
+event.timeline_color argb(255,200,100,0)
+"Day 1  13:00" "Credential harvesting"
+
+event.x              162
+event.dot_color      argb(255,200,60,180)
+event.text_color     argb(255,220,140,220)
+event.timeline_color argb(255,180,40,160)
+"Day 1  16:00" "Lateral movement detected"
+
+# Overnight gap (162→504 px) triggers fast camera transit
+event.x              504
+event.dot_color      argb(255,200,40,40)
+event.text_color     argb(255,255,120,100)
+event.line_color     argb(255,180,30,30)
+event.timeline_color argb(255,180,30,30)
+"Day 2  12:00" "Data exfiltration — 4 GB"
+
+event.x              576
+event.image          "icons/alert.svg"
+event.image_size     28
+event.dot_color      argb(255,255,200,0)
+event.text_color     argb(255,255,230,80)
+event.line_color     argb(255,200,160,0)
+event.timeline_color argb(255,220,160,0)
+"Day 2  16:00" "SIEM alert — SOC engaged"
+
+event.x              648
+event.image          "icons/lock.svg"
+event.image_size     26
+event.dot_color      argb(255,60,160,220)
+event.text_color     argb(255,140,200,255)
+event.timeline_color argb(255,60,160,220)
+"Day 2  19:00" "Credentials revoked"
+
+event.x              738
+event.image          "icons/shield.svg"
+event.image_size     28
+event.dot_color      argb(255,60,180,100)
+event.text_color     argb(255,120,230,150)
+event.line_color     argb(255,40,150,80)
+event.timeline_color argb(255,40,160,80)
+event.background     argb(255,8,25,12)
+event.background2    argb(255,5,15,8)
+"Day 3  00:00" "Threat contained"

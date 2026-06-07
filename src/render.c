@@ -88,8 +88,14 @@ double render_event_world_x(t2g_t *root, t2g_t *ev, int index)
 
 double render_camera_target(t2g_t *root, t2g_t *ev, int index)
 {
-	/* Place the event at 40 % from left; allow negative camera_x. */
-	return render_event_world_x(root, ev, index) - root->width * 0.4;
+	double x = render_event_world_x(root, ev, index);
+	if (root->split_show) {
+		/* In split mode the animation occupies the right portion of the
+		   canvas.  Place the event dot at 40 % of that right portion. */
+		int pw = root->split_width;
+		return x - (pw + (root->width - pw) * 0.4);
+	}
+	return x - root->width * 0.4;
 }
 
 /* Above (dir=-1) for even indices, below (+1) for odd. */
@@ -734,7 +740,8 @@ static void draw_progress_bar(cairo_t *cr, t2g_t *root,
 	int    bar_h   = root->progress_height > 0 ? root->progress_height : 4;
 	double mx      = 12.0;
 	double my      = 10.0;
-	double total_w = root->width  - 2.0 * mx;
+	double bar_x   = root->split_show ? (double)root->split_width + mx : mx;
+	double total_w = root->width - bar_x - mx;
 	double bar_y   = root->height - my  - (double)bar_h;
 	double fill_w  = total_w * progress;
 
@@ -744,24 +751,24 @@ static void draw_progress_bar(cairo_t *cr, t2g_t *root,
 		? root->progress_background : fill_col;
 
 	/* Track */
-	cairo_rectangle(cr, mx, bar_y, total_w, bar_h);
+	cairo_rectangle(cr, bar_x, bar_y, total_w, bar_h);
 	set_color(cr, track_col, 0.12);
 	cairo_fill(cr);
 
 	if (fill_w < 1.0) return;
 
 	/* Glow halo */
-	cairo_rectangle(cr, mx, bar_y - 2.0, fill_w, (double)bar_h + 4.0);
+	cairo_rectangle(cr, bar_x, bar_y - 2.0, fill_w, (double)bar_h + 4.0);
 	set_color(cr, fill_col, 0.20);
 	cairo_fill(cr);
 
 	/* Solid fill */
-	cairo_rectangle(cr, mx, bar_y, fill_w, (double)bar_h);
+	cairo_rectangle(cr, bar_x, bar_y, fill_w, (double)bar_h);
 	set_color(cr, fill_col, 0.88);
 	cairo_fill(cr);
 
 	/* Glowing leading-edge cap */
-	double tip_x = mx + fill_w;
+	double tip_x = bar_x + fill_w;
 	double tip_y = bar_y + (double)bar_h * 0.5;
 	double tip_r = (double)bar_h * 0.5 + 1.0;
 
@@ -776,6 +783,177 @@ static void draw_progress_bar(cairo_t *cr, t2g_t *root,
 	cairo_arc(cr, tip_x, tip_y, tip_r, 0, 2.0 * M_PI);
 	set_color(cr, fill_col, 1.0);
 	cairo_fill(cr);
+}
+
+/* ── Shared render body ─────────────────────────────────────────────── */
+
+/* ── Split-screen panel ─────────────────────────────────────────────── */
+
+/* Draw a single panel text line, left-aligned, single-paragraph, ellipsized. */
+static void panel_line(cairo_t *cr, const char *text,
+                        const char *font, int fsize,
+                        double x, double y_top, int max_w,
+                        t2gcolor_t col, double alpha)
+{
+	if (!text || !*text || alpha <= 0.0) return;
+	PangoLayout *pl = pango_cairo_create_layout(cr);
+	char fd[256];
+	snprintf(fd, sizeof(fd), "%s %d", font, fsize);
+	PangoFontDescription *pfd = pango_font_description_from_string(fd);
+	pango_layout_set_font_description(pl, pfd);
+	pango_font_description_free(pfd);
+	pango_layout_set_text(pl, text, -1);
+	pango_layout_set_alignment(pl, PANGO_ALIGN_LEFT);
+	pango_layout_set_width(pl, max_w * PANGO_SCALE);
+	pango_layout_set_ellipsize(pl, PANGO_ELLIPSIZE_END);
+	pango_layout_set_single_paragraph_mode(pl, TRUE);
+	set_color(cr, col, alpha);
+	cairo_move_to(cr, x, y_top);
+	pango_cairo_show_layout(cr, pl);
+	g_object_unref(pl);
+}
+
+/* Returns pixel height of a single text line at the given font/size. */
+static int panel_line_height(cairo_t *cr, const char *font, int fsize)
+{
+	PangoLayout *pl = pango_cairo_create_layout(cr);
+	char fd[256];
+	snprintf(fd, sizeof(fd), "%s %d", font, fsize);
+	PangoFontDescription *pfd = pango_font_description_from_string(fd);
+	pango_layout_set_font_description(pl, pfd);
+	pango_font_description_free(pfd);
+	pango_layout_set_text(pl, "Ag", -1);
+	int lw, lh;
+	pango_layout_get_pixel_size(pl, &lw, &lh);
+	g_object_unref(pl);
+	return lh;
+}
+
+/*
+ * Left panel: bullet list of all events.
+ *   committed_count  — events that have fully animated in
+ *   current_index    — event currently animating (-1 = transit, no highlight)
+ */
+static void draw_split_panel(cairo_t *cr, t2g_t *root, t2g_t *first_event,
+                              int committed_count, int current_index)
+{
+	int pw = root->split_width;
+	int ch = root->height;
+
+	/* Count events */
+	int n = 0;
+	for (t2g_t *e = first_event; e; e = e->next) n++;
+	if (n == 0) return;
+
+	/* Panel background */
+	t2gcolor_t bg1, bg2;
+	resolve_background(root, first_event, committed_count, &bg1, &bg2);
+	t2gcolor_t panel_bg = root->has_split_bg ? root->split_bg : bg1;
+	cairo_set_source_rgba(cr, panel_bg.r/255.0, panel_bg.g/255.0,
+	                          panel_bg.b/255.0, 1.0);
+	cairo_rectangle(cr, 0, 0, pw, ch);
+	cairo_fill(cr);
+	if (!root->has_split_bg) {
+		/* slight overlay to distinguish panel from the main canvas */
+		cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.05);
+		cairo_rectangle(cr, 0, 0, pw, ch);
+		cairo_fill(cr);
+	}
+
+	/* Right separator */
+	t2gcolor_t accent = root->theme_accent;
+	cairo_set_source_rgba(cr, accent.r/255.0, accent.g/255.0,
+	                          accent.b/255.0, 0.18);
+	cairo_set_line_width(cr, 1.0);
+	cairo_move_to(cr, pw - 0.5, 0);
+	cairo_line_to(cr, pw - 0.5, ch);
+	cairo_stroke(cr);
+
+	/* Row layout */
+	int top = 28, bot = 16;
+	int avail = ch - top - bot;
+	int row_h = avail / n;
+	if (row_h < 20) row_h = 20;
+	if (row_h > 50) row_h = 50;
+	int total_list_h = row_h * n;
+	int start_y = top + (avail - total_list_h) / 2;
+	if (start_y < top) start_y = top;
+
+	int bx      = 14;          /* bullet circle x center */
+	int tx      = 27;          /* text start x */
+	int text_w  = pw - tx - 8; /* available text width */
+
+	/* Font sizes: scale down for dense event lists */
+	int fsize   = (row_h >= 34) ? 11 : (row_h >= 27) ? 10 : 9;
+	int time_fs = fsize - 1;
+	int two_line = (row_h >= 30);  /* show time + label on separate lines */
+
+	const char *font = t2g_get_description_font(root);
+	int lh_label = panel_line_height(cr, font, fsize);
+	int lh_time  = two_line ? panel_line_height(cr, font, time_fs) : 0;
+
+	t2g_t *ev = first_event;
+	for (int i = 0; i < n && ev; i++, ev = ev->next) {
+		int row_top = start_y + i * row_h;
+		int row_cy  = row_top + row_h / 2;
+
+		int is_done    = (i < committed_count);
+		int is_current = (i == current_index);
+
+		double text_a   = is_current ? 1.0 : (is_done ? 0.72 : 0.24);
+		double bullet_a = is_current ? 1.0 : (is_done ? 0.55 : 0.18);
+		double bullet_r = is_current ? 5.5 : 4.0;
+
+		/* Left accent bar for the currently animating event */
+		if (is_current) {
+			cairo_set_source_rgba(cr, accent.r/255.0, accent.g/255.0,
+			                          accent.b/255.0, 0.65);
+			cairo_rectangle(cr, 0, row_top, 3, row_h);
+			cairo_fill(cr);
+		}
+
+		/* Glow behind the bullet for the current event */
+		if (is_current) {
+			double ar = accent.r/255.0, ag = accent.g/255.0, ab = accent.b/255.0;
+			cairo_pattern_t *glow = cairo_pattern_create_radial(
+				bx, row_cy, 0, bx, row_cy, bullet_r * 3.2);
+			cairo_pattern_add_color_stop_rgba(glow, 0.0, ar, ag, ab, 0.40);
+			cairo_pattern_add_color_stop_rgba(glow, 1.0, ar, ag, ab, 0.0);
+			cairo_set_source(cr, glow);
+			cairo_arc(cr, bx, row_cy, bullet_r * 3.2, 0, 2*M_PI);
+			cairo_fill(cr);
+			cairo_pattern_destroy(glow);
+		}
+
+		/* Bullet: filled circle (done/current) or outline (future) */
+		t2gcolor_t dc = ev->has_dot_color ? ev->dot_color : accent;
+		if (!is_done && !is_current) {
+			cairo_set_source_rgba(cr, dc.r/255.0, dc.g/255.0,
+			                          dc.b/255.0, bullet_a);
+			cairo_set_line_width(cr, 1.0);
+			cairo_arc(cr, bx, row_cy, bullet_r - 0.5, 0, 2*M_PI);
+			cairo_stroke(cr);
+		} else {
+			cairo_set_source_rgba(cr, dc.r/255.0, dc.g/255.0,
+			                          dc.b/255.0, bullet_a);
+			cairo_arc(cr, bx, row_cy, bullet_r, 0, 2*M_PI);
+			cairo_fill(cr);
+		}
+
+		/* Text: two lines (time above, label below) when row is tall enough */
+		t2gcolor_t tc = text_color(root, ev);
+		if (two_line && ev->time_text && *ev->time_text) {
+			int block_h = lh_time + 2 + lh_label;
+			double ty   = row_cy - block_h / 2.0;
+			panel_line(cr, ev->time_text, font, time_fs,
+			           tx, ty, text_w, accent, text_a * 0.65);
+			panel_line(cr, ev->label_text, font, fsize,
+			           tx, ty + lh_time + 2, text_w, tc, text_a);
+		} else {
+			panel_line(cr, ev->label_text, font, fsize,
+			           tx, row_cy - lh_label / 2.0, text_w, tc, text_a);
+		}
+	}
 }
 
 /* ── Shared render body ─────────────────────────────────────────────── */
@@ -827,6 +1005,9 @@ static void render_body(cairo_t *cr, t2g_t *root,
 		                     label_cx[committed_count]);
 
 	draw_progress_bar(cr, root, first_event, committed_count, frame);
+
+	if (root->split_show)
+		draw_split_panel(cr, root, first_event, committed_count, current_index);
 }
 
 /* ── Public API ─────────────────────────────────────────────────────── */
@@ -882,7 +1063,8 @@ cairo_surface_t *render_callout_frame(t2g_t *root,
 		cairo_image_surface_create(CAIRO_FORMAT_ARGB32, root->width, root->height);
 	cairo_t *cr = cairo_create(surface);
 
-	render_body(cr, root, first_event, committed_count, -1, -1, camera_x);
+	/* Highlight the upcoming event in the split panel during callout */
+	render_body(cr, root, first_event, committed_count, committed_count, -1, camera_x);
 	draw_callout(cr, root, ev, fade, exit_t);
 
 	cairo_destroy(cr);

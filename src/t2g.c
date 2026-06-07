@@ -107,6 +107,9 @@ t2g_t *t2g_new(void)
 	/* Camera */
 	t2g->camera_scroll = 1;
 
+	/* Split-screen */
+	t2g->split_width = 260;
+
 	/* Transition */
 	t2g->transition_style  = NULL;  /* NULL → "none" */
 	t2g->transition_frames = 8;
