@@ -137,8 +137,7 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cairo
             mingw-w64-x86_64-pango
-            mingw-w64-x86_64-librsvg2
-            mingw-w64-x86_64-gd
+            mingw-w64-x86_64-libgd
             mingw-w64-x86_64-libwebp
 
       - name: Configure

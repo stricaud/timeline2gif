@@ -1,6 +1,10 @@
 find_package(wxWidgets REQUIRED COMPONENTS core base adv stc)
 include(${wxWidgets_USE_FILE})
 
+# wxWidgets 3.x requires at least C++11; use 17 for broad compatibility.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_executable(t2g-ui WIN32 MACOSX_BUNDLE
     main.cpp
     MainFrame.cpp

@@ -20,10 +20,19 @@ find_package(GD    REQUIRED)
 
 if(NOT FLEX_INCLUDE_DIRS)
     find_path(FLEX_INCLUDE_DIRS FlexLexer.h
-        HINTS /opt/homebrew/opt/flex/include
+        HINTS /opt/homebrew/opt/flex/include   # macOS Homebrew custom flex
               /opt/homebrew/include
               /usr/local/include
-              "$ENV{MSYSTEM_PREFIX}/include")  # MSYS2: /mingw64, /ucrt64, …
+              /usr/include                      # Linux system flex
+              "$ENV{MSYSTEM_PREFIX}/include")   # MSYS2: /mingw64, /ucrt64, …
+endif()
+
+# If the search above still failed, clear the -NOTFOUND sentinel so it is
+# never passed as a literal include path.  FlexLexer.h will still be found
+# via the compiler's default search path on most Unix systems.
+if(NOT FLEX_INCLUDE_DIRS OR FLEX_INCLUDE_DIRS MATCHES "NOTFOUND")
+    unset(FLEX_INCLUDE_DIRS CACHE)
+    set(FLEX_INCLUDE_DIRS "")
 endif()
 
 add_subdirectory(src)
