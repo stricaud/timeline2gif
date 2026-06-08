@@ -144,6 +144,7 @@ jobs:
             mingw-w64-x86_64-librsvg
             mingw-w64-x86_64-libgd
             mingw-w64-x86_64-libwebp
+            mingw-w64-x86_64-gnurx
 
       - name: Configure
         run: |

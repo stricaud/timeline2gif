@@ -25,6 +25,11 @@ set(T2G_LINK_LIBS
     ${CMAKE_DL_LIBS}
 )
 
+# MinGW does not ship POSIX regex — the Bison-generated parser needs it.
+if(WIN32)
+    list(APPEND T2G_LINK_LIBS gnurx)
+endif()
+
 set(T2G_COMPILE_OPTS
     ${PANGOCAIRO_CFLAGS_OTHER}
     ${RSVG_CFLAGS_OTHER}
