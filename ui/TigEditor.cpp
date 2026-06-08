@@ -37,8 +37,8 @@ void TigEditor::ApplyTheme()
     /* Background / default text */
     StyleSetBackground(wxSTC_STYLE_DEFAULT, wxColour(16, 20, 40));
     StyleSetForeground(wxSTC_STYLE_DEFAULT, wxColour(200, 205, 220));
-    StyleSetFont(wxSTC_STYLE_DEFAULT,
-                 wxFont(wxFontInfo(12).Family(wxFONTFAMILY_TELETYPE)));
+    wxFont monoFont(wxFontInfo(12).Family(wxFONTFAMILY_TELETYPE));
+    StyleSetFont(wxSTC_STYLE_DEFAULT, monoFont);
     StyleClearAll();  /* propagate default to all styles */
 
     /* Comments  — dim, italic */
@@ -92,7 +92,11 @@ void TigEditor::ApplyTheme()
 void TigEditor::ColourRange(int startPos, int endPos)
 {
     if (startPos >= endPos) return;
+#if wxCHECK_VERSION(3, 1, 0)
     StartStyling(startPos);
+#else
+    StartStyling(startPos, 0x1f);  /* wx 3.0: mask selects which style bits to set */
+#endif
 
     int i = startPos;
     while (i < endPos) {
