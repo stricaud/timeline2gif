@@ -8,14 +8,11 @@
 
 #include "t2g.h"
 #include <parser.h>
-#include <regex.h>
 
 int t2glex(void);
 extern void t2gerror(t2g_t *t2g, const char *p);
 char *t2gget_text(void);
 int   t2gget_lineno(void);
-
-regex_t rex_argb;
 
 /* ── Pending per-event settings ───────────────────────────────────────
    Accumulated before a "time" "label" pair; applied when the item is
@@ -83,23 +80,13 @@ static void pending_apply(t2g_t *ev)
 static t2gcolor_t parse_argb(const char *str)
 {
 	t2gcolor_t c = {0, 0, 0, 0};
-	regmatch_t pm[5];
-	char buf[4];
-
-	if (regexec(&rex_argb, str, 5, pm, 0) != 0)
+	int a, r, g, b;
+	if (sscanf(str, "argb(%d,%d,%d,%d)", &a, &r, &g, &b) != 4)
 		return c;
-
-	#define EXTRACT(i, field) \
-		memset(buf, 0, sizeof(buf)); \
-		memcpy(buf, str + pm[i].rm_so, pm[i].rm_eo - pm[i].rm_so); \
-		c.field = (unsigned char)strtol(buf, NULL, 10);
-
-	EXTRACT(1, a)
-	EXTRACT(2, r)
-	EXTRACT(3, g)
-	EXTRACT(4, b)
-	#undef EXTRACT
-
+	c.a = (unsigned char)a;
+	c.r = (unsigned char)r;
+	c.g = (unsigned char)g;
+	c.b = (unsigned char)b;
 	return c;
 }
 
@@ -366,16 +353,11 @@ item: TOK_STRING TOK_STRING
 
 void t2g_parser_init(void)
 {
-	if (regcomp(&rex_argb,
-	            "argb\\(([0-9]+),([0-9]+),([0-9]+),([0-9]+)\\)",
-	            REG_EXTENDED) != 0)
-		fprintf(stderr, "Cannot compile argb regex\n");
 	pending_reset();
 }
 
 void t2g_parser_terminate(void)
 {
-	regfree(&rex_argb);
 	pending_reset();
 }
 
