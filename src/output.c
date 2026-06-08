@@ -344,6 +344,60 @@ static int apng_finish(apng_state_t *s)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   In-memory PNG frames
+   ═══════════════════════════════════════════════════════════════════════ */
+
+typedef struct {
+	t2g_frame_list_t *list;
+} frames_state_t;
+
+typedef struct { uint8_t *buf; size_t sz; } png_buf_t;
+
+static cairo_status_t png_write_cb(void *cls, const unsigned char *data,
+                                    unsigned int len)
+{
+	png_buf_t *b = (png_buf_t *)cls;
+	uint8_t *nb = realloc(b->buf, b->sz + len);
+	if (!nb) return CAIRO_STATUS_WRITE_ERROR;
+	b->buf = nb;
+	memcpy(b->buf + b->sz, data, len);
+	b->sz += len;
+	return CAIRO_STATUS_SUCCESS;
+}
+
+static void frames_add(frames_state_t *s, cairo_surface_t *surface,
+                        int delay_ms)
+{
+	t2g_frame_list_t *list = s->list;
+	list->frames = realloc(list->frames,
+	                        (size_t)(list->count + 1) * sizeof(t2g_frame_t));
+	t2g_frame_t *f = &list->frames[list->count];
+
+	png_buf_t buf = {NULL, 0};
+	cairo_surface_write_to_png_stream(surface, png_write_cb, &buf);
+	f->data     = buf.buf;
+	f->size     = buf.sz;
+	f->delay_ms = delay_ms;
+	list->count++;
+}
+
+static int frames_finish(frames_state_t *s)
+{
+	(void)s;
+	return 0;
+}
+
+void t2g_frame_list_free(t2g_frame_list_t *list)
+{
+	if (!list) return;
+	for (int i = 0; i < list->count; i++)
+		free(list->frames[i].data);
+	free(list->frames);
+	list->frames = NULL;
+	list->count  = 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    Public output_ctx_t API
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -351,9 +405,10 @@ struct output_ctx_t {
 	output_format_t fmt;
 	int width, height;
 	union {
-		gif_state_t  gif;
-		webp_state_t webp;
-		apng_state_t apng;
+		gif_state_t    gif;
+		webp_state_t   webp;
+		apng_state_t   apng;
+		frames_state_t frames;
 	};
 };
 
@@ -375,6 +430,17 @@ output_format_t output_detect_format(t2g_t *root, const char *filename)
 	return OUTPUT_GIF;
 }
 
+output_ctx_t *output_create_frames(t2g_frame_list_t *list,
+                                    int width, int height)
+{
+	output_ctx_t *ctx = calloc(1, sizeof(output_ctx_t));
+	ctx->fmt           = OUTPUT_FRAMES;
+	ctx->width         = width;
+	ctx->height        = height;
+	ctx->frames.list   = list;
+	return ctx;
+}
+
 output_ctx_t *output_create(const char *filename, output_format_t fmt,
                              int width, int height)
 {
@@ -384,6 +450,9 @@ output_ctx_t *output_create(const char *filename, output_format_t fmt,
 	ctx->height = height;
 
 	switch (fmt) {
+	case OUTPUT_FRAMES:
+		/* handled via output_create_frames(), not here */
+		break;
 	case OUTPUT_GIF:
 		ctx->gif.f = fopen(filename, "wb");
 		if (!ctx->gif.f) { perror(filename); free(ctx); return NULL; }
@@ -415,9 +484,10 @@ output_ctx_t *output_create(const char *filename, output_format_t fmt,
 void output_add_frame(output_ctx_t *ctx, cairo_surface_t *surface, int delay_ms)
 {
 	switch (ctx->fmt) {
-	case OUTPUT_GIF:  gif_add (&ctx->gif,  surface, delay_ms); break;
-	case OUTPUT_WEBP: webp_add(&ctx->webp, surface, delay_ms); break;
-	case OUTPUT_APNG: apng_add(&ctx->apng, surface, delay_ms); break;
+	case OUTPUT_GIF:    gif_add   (&ctx->gif,    surface, delay_ms); break;
+	case OUTPUT_WEBP:   webp_add  (&ctx->webp,   surface, delay_ms); break;
+	case OUTPUT_APNG:   apng_add  (&ctx->apng,   surface, delay_ms); break;
+	case OUTPUT_FRAMES: frames_add(&ctx->frames, surface, delay_ms); break;
 	}
 }
 
@@ -425,9 +495,10 @@ int output_finish(output_ctx_t *ctx)
 {
 	int ret = 0;
 	switch (ctx->fmt) {
-	case OUTPUT_GIF:  ret = gif_finish (&ctx->gif);  break;
-	case OUTPUT_WEBP: ret = webp_finish(&ctx->webp); break;
-	case OUTPUT_APNG: ret = apng_finish(&ctx->apng); break;
+	case OUTPUT_GIF:    ret = gif_finish   (&ctx->gif);    break;
+	case OUTPUT_WEBP:   ret = webp_finish  (&ctx->webp);   break;
+	case OUTPUT_APNG:   ret = apng_finish  (&ctx->apng);   break;
+	case OUTPUT_FRAMES: ret = frames_finish(&ctx->frames); break;
 	}
 	return ret;
 }
@@ -505,11 +576,9 @@ static void emit_callout(output_ctx_t *ctx, t2g_t *root,
 	}
 }
 
-int write_output(t2g_t *root, const char *filename)
+/* Shared render loop used by both write_output() and write_frames(). */
+static int write_output_ctx(t2g_t *root, output_ctx_t *ctx)
 {
-	output_format_t fmt = output_detect_format(root, filename);
-	output_ctx_t   *ctx = output_create(filename, fmt, root->width, root->height);
-	if (!ctx) return 1;
 
 	/* dissolve/pixelize: event appears via block reveal, not elastic bounce */
 	int is_pixelize = transitions_enabled(root) && root->transition_style &&
@@ -669,7 +738,31 @@ int write_output(t2g_t *root, const char *filename)
 		cairo_surface_destroy(final);
 	}
 
-	int ret = output_finish(ctx);
+	return output_finish(ctx);
+}
+
+int write_output(t2g_t *root, const char *filename)
+{
+	output_format_t fmt = output_detect_format(root, filename);
+	output_ctx_t   *ctx = output_create(filename, fmt, root->width, root->height);
+	if (!ctx) return 1;
+	int ret = write_output_ctx(root, ctx);
+	output_destroy(ctx);
+	return ret;
+}
+
+int write_frames(t2g_t *root, t2g_frame_list_t *out)
+{
+	out->frames = NULL;
+	out->count  = 0;
+
+	output_ctx_t *ctx = output_create_frames(out, root->width, root->height);
+	if (!ctx) return 1;
+
+	/* Reuse the same render loop as write_output() via a shared helper.
+	   We just swap the output context.  write_output() is self-contained
+	   so we duplicate the call with the frames context. */
+	int ret = write_output_ctx(root, ctx);
 	output_destroy(ctx);
 	return ret;
 }

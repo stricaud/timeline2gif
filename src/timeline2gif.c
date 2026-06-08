@@ -1,35 +1,46 @@
 #include <stdio.h>
 #include "t2g.h"
 #include "output.h"
+#include "timeline2gif.h"
 #include <parser.h>
 
-int main(int argc, char **argv)
+static t2g_t *parse_tig(const char *input_tig)
 {
-	if (argc < 3) {
-		fprintf(stderr, "Usage: %s timeline.tig output.gif|.webp|.apng\n",
-		        argv[0]);
-		return 1;
-	}
-
-	FILE *in = fopen(argv[1], "r");
+	FILE *in = fopen(input_tig, "r");
 	if (!in) {
-		fprintf(stderr, "Cannot open %s: ", argv[1]);
+		fprintf(stderr, "Cannot open %s: ", input_tig);
 		perror(NULL);
-		return 1;
+		return NULL;
 	}
-
 	t2g_t *t2g = t2g_new();
-
-	t2g_set_basedir(argv[1]);
+	t2g_set_basedir(input_tig);
 	t2g_parser_init();
 	t2grestart(in);
-	t2gparse(t2g);
+	int parse_ok = (t2gparse(t2g) == 0);
 	t2g_parser_terminate();
-
 	fclose(in);
+	if (!parse_ok) {
+		t2g_free(t2g);
+		return NULL;
+	}
+	return t2g;
+}
 
-	int ret = write_output(t2g, argv[2]);
-
+int t2g_generate(const char *input_tig, const char *output_path)
+{
+	t2g_t *t2g = parse_tig(input_tig);
+	if (!t2g) return 1;
+	int ret = write_output(t2g, output_path);
 	t2g_free(t2g);
 	return ret;
 }
+
+int t2g_generate_frames(const char *input_tig, t2g_frame_list_t *out)
+{
+	t2g_t *t2g = parse_tig(input_tig);
+	if (!t2g) return 1;
+	int ret = write_frames(t2g, out);
+	t2g_free(t2g);
+	return ret;
+}
+

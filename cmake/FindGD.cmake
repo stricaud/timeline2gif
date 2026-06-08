@@ -16,10 +16,11 @@ FIND_PATH(GD_INCLUDE_DIR gd.h
 )
 
 if(WIN32 AND NOT CYGWIN)
-  SET(GD_NAMES ${GD_NAMES} bgd)
-else(WIN32)
+  # bgd = legacy MSVC naming; gd = MinGW/MSYS2 naming
+  SET(GD_NAMES ${GD_NAMES} bgd gd)
+else()
   SET(GD_NAMES ${GD_NAMES} gd)
-endif(WIN32 AND NOT CYGWIN)
+endif()
 
 FIND_LIBRARY(GD_LIBRARY
   NAMES ${GD_NAMES}

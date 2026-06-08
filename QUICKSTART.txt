@@ -1,0 +1,91 @@
+timeline2gif — animated timeline generator
+==========================================
+
+USAGE
+-----
+  timeline2gif  <input.tig>  <output.gif|webp|apng>
+
+EXAMPLES (run from the folder containing this file)
+----------------------------------------------------
+  ./timeline2gif samples/first.tig       out.gif
+  ./timeline2gif samples/callout.tig     out.webp
+  ./timeline2gif samples/image_callout.tig out.webp   # images in callouts
+
+On Windows use:
+  timeline2gif.exe samples\first.tig out.gif
+
+.TIG FILE FORMAT — QUICK REFERENCE
+------------------------------------
+# Lines starting with # are comments
+
+## Canvas
+image.width   1000
+image.height  460
+
+## Theme colours  (argb = alpha,red,green,blue — all 0-255)
+theme.background  argb(255,6,12,28)
+theme.accent      argb(255,0,210,190)
+theme.text        argb(255,210,240,235)
+
+## Timeline layout
+timeline.position  230      # Y position of the timeline bar
+item.spacing       160      # pixels between events (world space)
+camera.scroll      yes      # pan camera to reveal each event
+
+## Animation speed (centiseconds)
+speed.frames       4        # frames per event animation
+speed.nextitem     60       # hold time after each event lands
+speed.loop_pause   800      # extra pause on the final frame
+
+## Events — one per line: "time-label" "description"
+"Jan 1990"  "Something happened"
+"Mar 1993"  "Another event"
+
+## Per-event overrides (set before the event line, reset after)
+event.dot_color   argb(255,255,200,80)
+event.text_color  argb(255,255,230,140)
+event.image       "icons/star.svg"      # dot icon (SVG or PNG)
+event.image_size  28
+"2004"  "Event with a star icon"
+
+## Callout spotlight (shown before each event animates in)
+callout.shape   rounded   # rectangle | rounded | cloud
+callout.effect  funnel    # none | funnel | zoom | float | fan
+callout.pause   150       # hold time in centiseconds
+callout.color   argb(255,5,18,38)
+callout.border  argb(255,0,210,190)
+
+## Image inside callout box
+callout.image       "icons/rocket.svg"   # global default
+callout.image_size  60                   # 0 = auto
+event.callout_image "icons/star.svg"     # per-event override
+# When image + text are both set, image shows in upper half,
+# text is placed clearly below it.
+# Use "" for the event label to show image-only.
+
+## Label image (shown at the connector label position)
+event.label_image      "icons/flag.svg"
+event.label_image_size 56
+# Text (if any) renders on top of the label image.
+
+## Supported image formats (no extra dependencies)
+#   .svg  — vector, via librsvg
+#   .png  — raster, via Cairo
+#   .gif  — raster, via libgd
+#   .jpg  — raster, via libgd (if libjpeg was compiled in)
+
+## Transitions between events
+transition.style   fade      # none | fade | wipe | dissolve
+transition.frames  8
+
+## Split-screen panel (bullet list on the left)
+split.show   yes
+split.width  260
+
+## Progress bar
+progress.show   yes
+progress.color  argb(255,0,210,190)
+
+MORE EXAMPLES
+-------------
+See the samples/ folder — each .tig file is heavily commented.

@@ -22,7 +22,13 @@ if(NOT FLEX_INCLUDE_DIRS)
     find_path(FLEX_INCLUDE_DIRS FlexLexer.h
         HINTS /opt/homebrew/opt/flex/include
               /opt/homebrew/include
-              /usr/local/include)
+              /usr/local/include
+              "$ENV{MSYSTEM_PREFIX}/include")  # MSYS2: /mingw64, /ucrt64, …
 endif()
 
 add_subdirectory(src)
+
+option(BUILD_UI "Build the wxWidgets GUI (requires wxWidgets)" OFF)
+if(BUILD_UI)
+    add_subdirectory(ui)
+endif()

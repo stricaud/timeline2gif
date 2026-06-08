@@ -384,5 +384,6 @@ void t2gerror(t2g_t *t2g, const char *str)
 	(void)t2g;
 	fprintf(stderr, "Parse error near '%s' line %d: %s\n",
 	        t2gget_text(), t2gget_lineno() + 1, str);
-	exit(1);
+	/* Do NOT exit() — when embedded in the GUI, exit() kills the whole app.
+	   Bison will return a non-zero value from t2gparse() after this call. */
 }

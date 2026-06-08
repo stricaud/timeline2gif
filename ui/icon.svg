@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%"   stop-color="#0e1b40"/>
+      <stop offset="100%" stop-color="#060c1e"/>
+    </linearGradient>
+    <linearGradient id="tl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#00c8e0"/>
+      <stop offset="100%" stop-color="#0094b4"/>
+    </linearGradient>
+    <linearGradient id="dot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#40e8ff"/>
+      <stop offset="100%" stop-color="#00a8c8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100" height="100" rx="18" ry="18" fill="url(#bg)"/>
+
+  <!-- Timeline track -->
+  <line x1="11" y1="64" x2="89" y2="64"
+        stroke="url(#tl)" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Event 1 — connector + callout -->
+  <line x1="26" y1="50" x2="26" y2="64"
+        stroke="#00c8e0" stroke-width="2" opacity="0.75"/>
+  <rect x="12" y="34" width="28" height="14" rx="4" ry="4"
+        fill="#00aac8" opacity="0.88"/>
+  <!-- Callout tail -->
+  <polygon points="23,48 26,53 29,48" fill="#00aac8" opacity="0.88"/>
+  <!-- Label lines inside callout -->
+  <line x1="17" y1="39" x2="35" y2="39" stroke="#c8f4ff" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>
+  <line x1="17" y1="44" x2="30" y2="44" stroke="#c8f4ff" stroke-width="1.6" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Event 3 — connector + smaller callout -->
+  <line x1="74" y1="52" x2="74" y2="64"
+        stroke="#0090b0" stroke-width="2" opacity="0.6"/>
+  <rect x="60" y="37" width="28" height="13" rx="4" ry="4"
+        fill="#006888" opacity="0.75"/>
+  <polygon points="71,51 74,55 77,51" fill="#006888" opacity="0.75"/>
+  <line x1="65" y1="42" x2="83" y2="42" stroke="#c8f4ff" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+  <line x1="65" y1="47" x2="76" y2="47" stroke="#c8f4ff" stroke-width="1.6" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Event dots -->
+  <circle cx="26" cy="64" r="5.5" fill="url(#dot)" stroke="#04121e" stroke-width="1.5"/>
+  <circle cx="50" cy="64" r="5"   fill="#00b8d4"   stroke="#04121e" stroke-width="1.5" opacity="0.85"/>
+  <circle cx="74" cy="64" r="5.5" fill="url(#dot)" stroke="#04121e" stroke-width="1.5"/>
+
+  <!-- Progress bar -->
+  <rect x="11" y="79" width="78" height="5" rx="2.5" fill="#04101e" opacity="0.9"/>
+  <rect x="11" y="79" width="45" height="5" rx="2.5" fill="#00aac8" opacity="0.7"/>
+
+  <!-- Tiny play triangle on progress bar -->
+  <polygon points="60,79 60,84 64,81.5" fill="#00d8f0" opacity="0.9"/>
+</svg>

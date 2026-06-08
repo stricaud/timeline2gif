@@ -1,0 +1,175 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# Produces:
+#   timeline2gif-macos-arm64.dmg   — macOS DMG installer (CLI + GUI app bundle)
+#   timeline2gif-linux-x86_64.tar.gz
+#   timeline2gif-windows-x86_64.zip
+
+jobs:
+
+  # ── macOS arm64 ───────────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-14        # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install cmake bison flex libgd librsvg pango webp wxwidgets create-dmg
+
+      - name: Put Homebrew bison and flex first in PATH
+        # macOS ships bison 2.3 — we need 3.x for %define api.prefix
+        run: |
+          echo "$(brew --prefix bison)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix flex)/bin"  >> "$GITHUB_PATH"
+
+      - name: Generate app icon (icns from SVG)
+        run: |
+          ICONSET=ui/AppIcon.iconset
+          mkdir -p "$ICONSET"
+          for size in 16 32 128 256 512; do
+            rsvg-convert -w $size  -h $size  ui/icon.svg -o "$ICONSET/icon_${size}x${size}.png"
+          done
+          rsvg-convert -w 32   -h 32   ui/icon.svg -o "$ICONSET/icon_16x16@2x.png"
+          rsvg-convert -w 64   -h 64   ui/icon.svg -o "$ICONSET/icon_32x32@2x.png"
+          rsvg-convert -w 256  -h 256  ui/icon.svg -o "$ICONSET/icon_128x128@2x.png"
+          rsvg-convert -w 512  -h 512  ui/icon.svg -o "$ICONSET/icon_256x256@2x.png"
+          rsvg-convert -w 1024 -h 1024 ui/icon.svg -o "$ICONSET/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET" -o ui/AppIcon.icns
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_UI=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Create DMG
+        run: |
+          # Staging area — app bundle + CLI + samples
+          mkdir -p dmg_stage/samples/icons
+          cp -r "build/ui/t2g-ui.app" dmg_stage/
+          cp build/src/timeline2gif    dmg_stage/
+          cp QUICKSTART.txt            dmg_stage/
+          cp samples/*.tig             dmg_stage/samples/ 2>/dev/null || true
+          cp samples/icons/*.svg       dmg_stage/samples/icons/
+
+          # DMG with drag-to-Applications layout
+          create-dmg \
+            --volname "timeline2gif Studio" \
+            --volicon "ui/AppIcon.icns" \
+            --window-pos 200 130 \
+            --window-size 620 420 \
+            --icon-size 100 \
+            --icon "t2g-ui.app" 160 200 \
+            --hide-extension "t2g-ui.app" \
+            --app-drop-link 460 200 \
+            "timeline2gif-macos-arm64.dmg" \
+            "dmg_stage/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timeline2gif-macos-arm64
+          path: timeline2gif-macos-arm64.dmg
+
+  # ── Linux x86-64 (Debian/Ubuntu) ──────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake bison flex \
+            libcairo2-dev libpango1.0-dev \
+            librsvg2-dev libgd-dev libwebp-dev
+
+      - name: Configure
+        run: |
+          mkdir build
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/samples/icons
+          cp build/src/timeline2gif dist/
+          cp QUICKSTART.txt dist/
+          cp samples/*.tig dist/samples/ 2>/dev/null || true
+          cp samples/icons/*.svg dist/samples/icons/
+          tar czf timeline2gif-linux-x86_64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timeline2gif-linux-x86_64
+          path: timeline2gif-linux-x86_64.tar.gz
+
+  # ── Windows x86-64 (MinGW64 via MSYS2) ───────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            bison
+            flex
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cairo
+            mingw-w64-x86_64-pango
+            mingw-w64-x86_64-librsvg2
+            mingw-w64-x86_64-gd
+            mingw-w64-x86_64-libwebp
+
+      - name: Configure
+        run: |
+          mkdir build
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=/mingw64
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Collect DLLs and package
+        run: |
+          mkdir -p dist/samples/icons
+          cp build/src/timeline2gif.exe dist/
+
+          # Copy all MinGW DLLs the binary depends on (ldd in MSYS2 resolves
+          # the full transitive dependency tree for MinGW executables)
+          ldd dist/timeline2gif.exe \
+            | grep '/mingw64/bin' \
+            | sed 's/.*=> //' | sed 's/ (.*//' \
+            | xargs -I{} cp {} dist/
+
+          cp QUICKSTART.txt dist/
+          cp samples/*.tig dist/samples/ 2>/dev/null || true
+          cp samples/icons/*.svg dist/samples/icons/
+
+          cd dist && zip -r ../timeline2gif-windows-x86_64.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timeline2gif-windows-x86_64
+          path: timeline2gif-windows-x86_64.zip
