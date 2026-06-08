@@ -146,7 +146,8 @@ jobs:
             mingw-w64-x86_64-librsvg
             mingw-w64-x86_64-libgd
             mingw-w64-x86_64-libwebp
-            mingw-w64-x86_64-wxwidgets
+            mingw-w64-x86_64-wxwidgets3.2-msw
+            mingw-w64-x86_64-wxwidgets3.2-common
 
       - name: Configure
         run: |
