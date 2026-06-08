@@ -96,12 +96,13 @@ jobs:
           sudo apt-get install -y \
             cmake bison flex \
             libcairo2-dev libpango1.0-dev \
-            librsvg2-dev libgd-dev libwebp-dev
+            librsvg2-dev libgd-dev libwebp-dev \
+            libwxgtk3.0-gtk3-dev
 
       - name: Configure
         run: |
           mkdir build
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_UI=ON
 
       - name: Build
         run: cmake --build build --parallel
@@ -110,6 +111,7 @@ jobs:
         run: |
           mkdir -p dist/samples/icons
           cp build/src/timeline2gif dist/
+          cp build/ui/t2g-ui         dist/
           cp QUICKSTART.txt dist/
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
@@ -144,13 +146,15 @@ jobs:
             mingw-w64-x86_64-librsvg
             mingw-w64-x86_64-libgd
             mingw-w64-x86_64-libwebp
+            mingw-w64-x86_64-wxwidgets
 
       - name: Configure
         run: |
           mkdir build
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=/mingw64
+            -DCMAKE_PREFIX_PATH=/mingw64 \
+            -DBUILD_UI=ON
 
       - name: Build
         run: cmake --build build --parallel
@@ -159,19 +163,21 @@ jobs:
         run: |
           mkdir -p dist/samples/icons
           cp build/src/timeline2gif.exe dist/
+          cp build/ui/t2g-ui.exe        dist/
 
-          # Copy all MinGW DLLs the binary depends on (ldd in MSYS2 resolves
-          # the full transitive dependency tree for MinGW executables)
-          ldd dist/timeline2gif.exe \
+          # Collect all MinGW DLLs needed by either binary
+          { ldd dist/timeline2gif.exe; ldd dist/t2g-ui.exe; } \
             | grep '/mingw64/bin' \
             | sed 's/.*=> //' | sed 's/ (.*//' \
+            | sort -u \
             | xargs -I{} cp {} dist/
 
           cp QUICKSTART.txt dist/
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
 
-          cd dist && zip -r ../timeline2gif-windows-x86_64.zip .
+          # 7-Zip is pre-installed on every GitHub Windows runner
+          cd dist && "/c/Program Files/7-Zip/7z.exe" a -tzip ../timeline2gif-windows-x86_64.zip .
 
       - uses: actions/upload-artifact@v4
         with:
