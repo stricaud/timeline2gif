@@ -1,0 +1,119 @@
+# samples/image_callout.tig — image in callout and label demo
+#
+# Demonstrates image modes for callouts and timeline labels:
+#
+#   callout image-only     — image fills the callout box, no text
+#   callout image + text   — image in upper half, text clearly below it
+#   label image            — image at the connector label position
+#   label image + text     — image with text on top
+#
+# Supported image formats (no extra dependencies):
+#   .svg   — vector, scaled losslessly via librsvg
+#   .png   — raster, loaded natively by Cairo
+#   .gif   — raster, loaded via libgd
+#   .jpg / .jpeg — raster, loaded via libgd (if libjpeg was compiled in)
+#
+# Settings reference:
+#   callout.image        <path>   global default image for all callout boxes
+#   callout.image_size   <px>     callout image size (0 = auto-fit to box)
+#   event.callout_image  <path>   per-event callout image override
+#   event.callout_image_size <px> per-event callout image size
+#   event.label_image    <path>   image at the label connector position
+#   event.label_image_size   <px> label image size (0 = 60 px default)
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/image_callout.tig  samples/image_callout.webp
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  1000
+image.height 480
+
+# ── Cosmic dark theme ────────────────────────────────────────────────────
+theme.background  argb(255,8,10,26)
+theme.background2 argb(255,4,6,16)
+theme.accent      argb(255,120,80,255)
+theme.text        argb(255,220,215,255)
+
+# ── Layout ───────────────────────────────────────────────────────────────
+timeline.position 240
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames     4
+speed.nextitem   70
+speed.loop_pause 800
+camera.scroll    yes
+
+time.format  number
+item.spacing 180
+
+# ── Callout ──────────────────────────────────────────────────────────────
+callout.shape   rounded
+callout.pause   180
+callout.effect  fan
+callout.color   argb(255,14,12,38)
+callout.border  argb(255,120,80,255)
+
+# Global callout image — used by events that don't set event.callout_image.
+# Empty label "" → image fills the whole box with no text.
+callout.image      "icons/star.svg"
+callout.image_size 56
+
+# ── Progress bar ─────────────────────────────────────────────────────────
+progress.show   yes
+progress.color  argb(255,120,80,255)
+
+# ════════════════════════════════════════════════════════════════════════
+# Events
+# ════════════════════════════════════════════════════════════════════════
+
+# 1. fan effect + image-only callout: star SVG fills the box, spins into the dot
+event.callout_effect  fan
+event.dot_color       argb(255,255,200,80)
+event.text_color      argb(255,255,230,140)
+"1" ""
+
+# 2. fan effect + image+text: rocket in upper half, "Launch" clearly below it
+event.callout_effect  fan
+event.callout_image      "icons/rocket.svg"
+event.callout_image_size 60
+event.dot_color       argb(255,100,200,255)
+event.text_color      argb(255,160,220,255)
+"2" "Launch"
+
+# 3. funnel + shield image + two-line text below
+event.callout_effect  funnel
+event.callout_image      "icons/shield.svg"
+event.callout_image_size 58
+event.dot_color       argb(255,80,220,140)
+event.text_color      argb(255,140,255,200)
+"3" "Secured"
+
+# 4. fan + label image-only at connector (flag icon, empty label)
+event.callout_effect  fan
+event.callout_image      "icons/flag.svg"
+event.callout_image_size 52
+event.label_image        "icons/flag.svg"
+event.label_image_size   56
+event.dot_color       argb(255,255,120,80)
+event.text_color      argb(255,255,180,140)
+"4" ""
+
+# 5. zoom + label image + text on top (alert icon with "Warning")
+event.callout_effect  zoom
+event.callout_image      "icons/alert.svg"
+event.callout_image_size 58
+event.label_image        "icons/alert.svg"
+event.label_image_size   52
+event.dot_color       argb(255,255,80,80)
+event.text_color      argb(255,255,160,160)
+"5" "Warning"
+
+# 6. fan effect + global star callout; label image with text on top
+event.callout_effect  fan
+event.label_image        "icons/star.svg"
+event.label_image_size   52
+event.dot_color       argb(255,180,140,255)
+event.text_color      argb(255,210,185,255)
+"6" "Achieved"

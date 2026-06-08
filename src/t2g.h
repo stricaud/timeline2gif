@@ -78,6 +78,8 @@ struct _t2g_t {
 	t2gcolor_t callout_color;        /* box fill */
 	int        has_callout_border;
 	t2gcolor_t callout_border;       /* border / glow color */
+	char      *callout_image;        /* default image shown in all callout boxes */
+	int        callout_image_size;   /* 0 = auto-fit to box height */
 
 	/* Per-event callout effect override */
 	int        has_ev_callout_effect;
@@ -126,6 +128,15 @@ struct _t2g_t {
 	/* Per-event image to draw instead of the standard dot */
 	char *dot_image;       /* path to PNG or SVG file */
 	int   dot_image_size;  /* icon diameter in pixels (0 = use DOT_RADIUS*4) */
+
+	/* Per-event callout image override */
+	int   has_ev_callout_image;
+	char *ev_callout_image;       /* image shown inside the callout box */
+	int   ev_callout_image_size;  /* 0 = auto-fit to box height */
+
+	/* Per-event label image (shown at the label position) */
+	char *label_image;
+	int   label_image_size;       /* 0 = DEFAULT_LABEL_IMAGE_SIZE */
 
 	struct _t2g_t *root;
 	struct _t2g_t *next;

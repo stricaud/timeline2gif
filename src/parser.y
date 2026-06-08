@@ -31,12 +31,18 @@ static struct {
 	char      *dot_image;
 	int        dot_image_size;
 	char      *callout_effect;   /* per-event callout exit effect override */
+	char      *callout_image;    /* per-event callout image override */
+	int        callout_image_size;
+	char      *label_image;      /* per-event label area image */
+	int        label_image_size;
 } pending;
 
 static void pending_reset(void)
 {
 	free(pending.dot_image);
 	free(pending.callout_effect);
+	free(pending.callout_image);
+	free(pending.label_image);
 	memset(&pending, 0, sizeof(pending));
 }
 
@@ -60,6 +66,17 @@ static void pending_apply(t2g_t *ev)
 		ev->ev_callout_effect     = pending.callout_effect;
 		pending.callout_effect    = NULL;
 	}
+	if (pending.callout_image)    {
+		ev->has_ev_callout_image  = 1;
+		ev->ev_callout_image      = pending.callout_image;
+		pending.callout_image     = NULL;
+	}
+	if (pending.callout_image_size) ev->ev_callout_image_size = pending.callout_image_size;
+	if (pending.label_image)      {
+		ev->label_image           = pending.label_image;
+		pending.label_image       = NULL;
+	}
+	if (pending.label_image_size) ev->label_image_size = pending.label_image_size;
 }
 
 /* ── Color parser ─────────────────────────────────────────────────── */
@@ -172,6 +189,42 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 				         t2g_get_basedir(), $4);
 				pending.dot_image = strdup(resolved);
 			}
+
+		/* Per-event: callout image override */
+		} else if (!strcmp($1, "event") && !strcmp($3, "callout_image")) {
+			free(pending.callout_image);
+			if ($4[0] == '/' || $4[0] == '~') {
+				pending.callout_image = strdup($4);
+			} else {
+				char resolved[4096];
+				snprintf(resolved, sizeof(resolved), "%s/%s",
+				         t2g_get_basedir(), $4);
+				pending.callout_image = strdup(resolved);
+			}
+
+		/* Per-event: label area image */
+		} else if (!strcmp($1, "event") && !strcmp($3, "label_image")) {
+			free(pending.label_image);
+			if ($4[0] == '/' || $4[0] == '~') {
+				pending.label_image = strdup($4);
+			} else {
+				char resolved[4096];
+				snprintf(resolved, sizeof(resolved), "%s/%s",
+				         t2g_get_basedir(), $4);
+				pending.label_image = strdup(resolved);
+			}
+
+		/* Global: callout image and size */
+		} else if (!strcmp($1, "callout") && !strcmp($3, "image")) {
+			free(timeline->callout_image);
+			if ($4[0] == '/' || $4[0] == '~') {
+				timeline->callout_image = strdup($4);
+			} else {
+				char resolved[4096];
+				snprintf(resolved, sizeof(resolved), "%s/%s",
+				         t2g_get_basedir(), $4);
+				timeline->callout_image = strdup(resolved);
+			}
 		}
 
 		free($1); free($3); free($4);
@@ -276,6 +329,8 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			timeline->transition_block_size = $4;
 		} else if (!strcmp($1, "callout") && !strcmp($3, "pause")) {
 			timeline->callout_pause = $4;
+		} else if (!strcmp($1, "callout") && !strcmp($3, "image_size")) {
+			timeline->callout_image_size = $4;
 		} else if (!strcmp($1, "progress") && !strcmp($3, "height")) {
 			timeline->progress_height = $4;
 		} else if (!strcmp($1, "split") && !strcmp($3, "width")) {
@@ -283,9 +338,11 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 
 		/* Per-event */
 		} else if (!strcmp($1, "event")) {
-			if      (!strcmp($3, "x"))          pending.x_pos          = $4;
-			else if (!strcmp($3, "image_size")) pending.dot_image_size = $4;
-			else if (!strcmp($3, "pause"))    { pending.has_event_pause = 1; pending.event_pause = $4; }
+			if      (!strcmp($3, "x"))                 pending.x_pos               = $4;
+			else if (!strcmp($3, "image_size"))        pending.dot_image_size      = $4;
+			else if (!strcmp($3, "callout_image_size")) pending.callout_image_size = $4;
+			else if (!strcmp($3, "label_image_size"))  pending.label_image_size    = $4;
+			else if (!strcmp($3, "pause"))           { pending.has_event_pause = 1; pending.event_pause = $4; }
 		}
 
 		free($1); free($3);

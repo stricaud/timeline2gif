@@ -4,10 +4,11 @@
 #include <cairo/cairo.h>
 #include "t2g.h"
 
-#define FRAMES_PER_ITEM  12
-#define CONNECTOR_H      85   /* px from timeline to label anchor */
-#define DOT_RADIUS        7   /* event dot radius in px */
-#define DEFAULT_ICON_SIZE 28  /* icon size when event.image_size is unset */
+#define FRAMES_PER_ITEM       12
+#define CONNECTOR_H           85   /* px from timeline to label anchor */
+#define DOT_RADIUS             7   /* event dot radius in px */
+#define DEFAULT_ICON_SIZE     28   /* icon size when event.image_size is unset */
+#define DEFAULT_LABEL_IMAGE_SIZE 60  /* label image size when event.label_image_size is unset */
 
 /* World-space x position for an event (respects ev->x_pos override). */
 double render_event_world_x(t2g_t *root, t2g_t *ev, int index);

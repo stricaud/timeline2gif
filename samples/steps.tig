@@ -1,0 +1,41 @@
+# Canvas
+image.width  800
+image.height 500
+
+# Theme colors (argb format)
+theme.background  argb(255,22,33,62)
+theme.background2 argb(255,10,25,47)
+theme.accent      argb(255,0,180,216)
+theme.text        argb(255,224,224,224)
+
+# Timeline
+timeline.position 260
+
+# Fonts — Pango family names; use any name installed on your system
+# time.font       Arial
+# description.font "Liberation Sans"
+description.font_size 13
+time.font_size        11
+
+# Speed (centiseconds per frame)
+speed.frames   5
+speed.nextitem 60
+
+# Spacing between events in world space (pixels)
+item.spacing 180
+
+# Camera panning (yes/no)
+camera.scroll yes
+
+# Output format: gif, webp, apng  (also auto-detected from file extension)
+# output.format gif
+
+event.pause 100
+"Step 1" "Hello"
+
+event.pause 200
+"Step 2" "World!"
+
+event.pause 400
+"Step 3" "How are steps going?"
+

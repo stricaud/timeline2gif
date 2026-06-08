@@ -153,8 +153,11 @@ void t2g_free(t2g_t *t2g)
 		free(iter->time_format);
 		free(iter->callout_shape);
 		free(iter->callout_effect);
+		free(iter->callout_image);
 		free(iter->ev_callout_effect);
+		free(iter->ev_callout_image);
 		free(iter->dot_image);
+		free(iter->label_image);
 		free(iter);
 		iter = next;
 	}

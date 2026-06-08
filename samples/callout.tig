@@ -14,6 +14,7 @@
 #     funnel   — shape contracts toward the event dot on the timeline
 #     zoom     — shape scales to zero at its centre
 #     float    — shape drifts upward while fading
+#     fan      — shape spins (2.5 rotations) while contracting to the dot
 #
 # Run from the repo root:
 #   ./build/src/timeline2gif  samples/callout.tig  samples/callout.webp

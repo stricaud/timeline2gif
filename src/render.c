@@ -7,6 +7,7 @@
 #include <cairo/cairo.h>
 #include <pango/pangocairo.h>
 #include <librsvg/rsvg.h>
+#include <gd.h>
 
 #include "render.h"
 #include "easing.h"
@@ -229,7 +230,36 @@ static void compute_label_cx(cairo_t *cr, t2g_t *root,
 	}
 }
 
-/* ── Image rendering (PNG + SVG) ────────────────────────────────────── */
+/* ── Image rendering (SVG + PNG + GIF + JPEG) ───────────────────────── */
+
+/* Convert a GD truecolor image (already scaled) to a Cairo ARGB32 surface.
+   GD alpha: 0 = opaque, 127 = transparent  (inverted, 7-bit).
+   Cairo ARGB32: 255 = opaque, 0 = transparent, RGB premultiplied by alpha. */
+static cairo_surface_t *gd_to_cairo(gdImagePtr gd, int w, int h)
+{
+	cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+	cairo_surface_flush(surf);
+	unsigned char *cdata   = cairo_image_surface_get_data(surf);
+	int            cstride = cairo_image_surface_get_stride(surf);
+
+	for (int y = 0; y < h; y++) {
+		uint32_t *row = (uint32_t *)(cdata + y * cstride);
+		for (int x = 0; x < w; x++) {
+			int     px = gdImageGetTrueColorPixel(gd, x, y);
+			uint8_t r  = (uint8_t)gdTrueColorGetRed(px);
+			uint8_t g  = (uint8_t)gdTrueColorGetGreen(px);
+			uint8_t b  = (uint8_t)gdTrueColorGetBlue(px);
+			int     ga = gdTrueColorGetAlpha(px);          /* 0–127 */
+			uint8_t a  = (uint8_t)(255 - ga * 255 / 127);
+			row[x] = ((uint32_t)a        << 24) |
+			         ((uint32_t)(r*a/255) << 16) |
+			         ((uint32_t)(g*a/255) <<  8) |
+			          (uint32_t)(b*a/255);
+		}
+	}
+	cairo_surface_mark_dirty(surf);
+	return surf;
+}
 
 static void draw_image(cairo_t    *cr,
                        const char *path,
@@ -247,6 +277,7 @@ static void draw_image(cairo_t    *cr,
 	double hy = cy - sz / 2.0;
 
 	if (ext && strcasecmp(ext, ".svg") == 0) {
+		/* ── SVG via librsvg ── */
 		GError     *gerr   = NULL;
 		RsvgHandle *handle = rsvg_handle_new_from_file(path, &gerr);
 		if (!handle) {
@@ -262,7 +293,9 @@ static void draw_image(cairo_t    *cr,
 		cairo_pop_group_to_source(cr);
 		cairo_paint_with_alpha(cr, alpha);
 		g_object_unref(handle);
-	} else {
+
+	} else if (ext && strcasecmp(ext, ".png") == 0) {
+		/* ── PNG via Cairo native ── */
 		cairo_surface_t *img = cairo_image_surface_create_from_png(path);
 		if (cairo_surface_status(img) != CAIRO_STATUS_SUCCESS) {
 			fprintf(stderr, "PNG load error (%s)\n", path);
@@ -278,6 +311,40 @@ static void draw_image(cairo_t    *cr,
 		cairo_paint_with_alpha(cr, alpha);
 		cairo_restore(cr);
 		cairo_surface_destroy(img);
+
+	} else {
+		/* ── GIF / JPEG (and any other raster) via GD ── */
+		FILE *f = fopen(path, "rb");
+		if (!f) { fprintf(stderr, "Cannot open image: %s\n", path); return; }
+
+		gdImagePtr src = NULL;
+		if (ext && strcasecmp(ext, ".gif") == 0) {
+			src = gdImageCreateFromGif(f);
+		} else if (ext && (strcasecmp(ext, ".jpg")  == 0 ||
+		                   strcasecmp(ext, ".jpeg") == 0)) {
+			src = gdImageCreateFromJpeg(f);
+		}
+		fclose(f);
+
+		if (!src) { fprintf(stderr, "Failed to load image: %s\n", path); return; }
+
+		int isz = (int)(sz > 0.5 ? sz : 1.0);
+		gdImagePtr scaled = gdImageCreateTrueColor(isz, isz);
+		gdImageSaveAlpha(scaled, 1);
+		gdImageAlphaBlending(scaled, 0);
+		gdImageCopyResampled(scaled, src, 0, 0, 0, 0,
+		                     isz, isz, gdImageSX(src), gdImageSY(src));
+		gdImageDestroy(src);
+
+		cairo_surface_t *surf = gd_to_cairo(scaled, isz, isz);
+		gdImageDestroy(scaled);
+
+		cairo_save(cr);
+		cairo_translate(cr, hx, hy);
+		cairo_set_source_surface(cr, surf, 0, 0);
+		cairo_paint_with_alpha(cr, alpha);
+		cairo_restore(cr);
+		cairo_surface_destroy(surf);
 	}
 }
 
@@ -470,6 +537,10 @@ static void draw_committed_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 
 	draw_connector(cr, sx, label_cx, ty + dir * DOT_RADIUS, shelf_y, lc, alpha);
 	draw_dot_element(cr, root, ev, sx, ty, 1.0, alpha);
+	if (ev->label_image) {
+		int sz = ev->label_image_size > 0 ? ev->label_image_size : DEFAULT_LABEL_IMAGE_SIZE;
+		draw_image(cr, ev->label_image, sz, label_cx, label_y, 1.0, alpha);
+	}
 	draw_text(cr, ev->label_text,
 	          t2g_get_description_font(ev),
 	          t2g_get_description_font_size(ev),
@@ -526,12 +597,16 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	/* Dot / icon */
 	draw_dot_element(cr, root, ev, sx, ty, dot_t, dot_t);
 
-	/* Text slides in from the connector side while fading.
-	   Label drifts from near the timeline outward to its shelf position.
-	   Time drifts away from the timeline to its final position. */
+	/* Label image + text slide in from the connector side while fading. */
 	if (text_a > 0.01) {
 		double label_slide = 12.0 * (1.0 - text_a);
 		double time_slide  =  6.0 * (1.0 - text_a);
+
+		if (ev->label_image) {
+			int sz = ev->label_image_size > 0 ? ev->label_image_size : DEFAULT_LABEL_IMAGE_SIZE;
+			draw_image(cr, ev->label_image, sz,
+			           label_cx, label_y - dir * label_slide, 1.0, text_a);
+		}
 
 		draw_text(cr, ev->label_text,
 		          t2g_get_description_font(ev),
@@ -629,6 +704,8 @@ static void draw_callout(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	double bw = W * 0.62;
 	double bh = H * 0.30;
 
+	double fan_angle = 0.0;   /* non-zero only for the "fan" exit effect */
+
 	/* ── Exit effect transform ────────────────────────────────────────── */
 	if (exit_t > 0.0 && effect && strcmp(effect, "none") != 0) {
 		double et = ease_in_cubic(exit_t);
@@ -652,6 +729,17 @@ static void draw_callout(cairo_t *cr, t2g_t *root, t2g_t *ev,
 			/* Drift upward and narrow slightly */
 			cy -= bh * 0.60 * et;
 			bw  = bw * (1.0 - et * 0.25);
+
+		} else if (strcmp(effect, "fan") == 0) {
+			/* Spin toward the dot while shrinking — the rotation is applied via
+			   a Cairo transform after the dim overlay is drawn. */
+			double dot_x = W * 0.40;
+			double dot_y = (double)root->timeline_pos_y;
+			cx = lerp(cx, dot_x, et);
+			cy = lerp(cy, dot_y, et);
+			bw = bw * (1.0 - et);
+			bh = bh * (1.0 - et);
+			fan_angle = exit_t * M_PI * 5.0;  /* 2.5 full rotations */
 		}
 	}
 
@@ -672,6 +760,14 @@ static void draw_callout(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	cairo_rectangle(cr, 0, 0, W, H);
 	cairo_set_source_rgba(cr, 0, 0, 0, 0.68 * fade * (1.0 - exit_t * 0.7));
 	cairo_fill(cr);
+
+	/* For the "fan" effect, rotate the shape+image+text around (cx, cy) */
+	if (fan_angle != 0.0) {
+		cairo_save(cr);
+		cairo_translate(cr, cx, cy);
+		cairo_rotate(cr, fan_angle);
+		cairo_translate(cr, -cx, -cy);
+	}
 
 	/* ── Shape ── */
 	if (is_cloud) {
@@ -703,21 +799,59 @@ static void draw_callout(cairo_t *cr, t2g_t *root, t2g_t *ev,
 		cairo_stroke(cr);
 	}
 
-	/* ── Text — fades out faster than the shape during exit ── */
-	double text_alpha = fade * clamp01(1.0 - exit_t * 2.5);
-	if (text_alpha > 0.01) {
+	/* ── Image inside callout box (per-event override beats global) ── */
+	const char *cimg_path = NULL;
+	int cimg_size = 0;
+	if (ev && ev->has_ev_callout_image && ev->ev_callout_image) {
+		cimg_path = ev->ev_callout_image;
+		cimg_size = ev->ev_callout_image_size;
+	} else if (root->callout_image) {
+		cimg_path = root->callout_image;
+		cimg_size = root->callout_image_size;
+	}
+
+	double content_alpha = fade * clamp01(1.0 - exit_t * 2.5);
+
+	int has_ctext = (label && *label) || (time_str && *time_str);
+
+	if (cimg_path && content_alpha > 0.01) {
+		/* When text follows below, use a smaller auto-size and shift upward */
+		int sz_px = cimg_size > 0 ? cimg_size :
+		            (has_ctext ? (int)(bh * 0.40) : (int)(bh * 0.62));
+		double img_scale = (exit_t > 0.0) ? (bw / (root->width * 0.62)) : 1.0;
+		if (img_scale < 0.01) img_scale = 0.01;
+		double img_cy = has_ctext ? cy - bh * 0.12 : cy;
+		cairo_push_group(cr);
+		draw_image(cr, cimg_path, sz_px, cx, img_cy, img_scale, 1.0);
+		cairo_pop_group_to_source(cr);
+		cairo_paint_with_alpha(cr, content_alpha);
+	}
+
+	/* ── Text: below image when image present, centred otherwise ── */
+	if (content_alpha > 0.01) {
 		int desc_fs = t2g_get_description_font_size(root) + 4;
 		int time_fs = t2g_get_time_font_size(root);
 
-		double text_y = cy + (is_cloud ? bh * 0.08 : 0.0)
-		                - (double)(desc_fs + time_fs) * 0.35;
-		double time_y = text_y + desc_fs * 1.30;
+		double text_y, time_y;
+		if (cimg_path && has_ctext) {
+			/* Below the image — shift down into the lower portion of the box */
+			text_y = cy + bh * 0.24 + (is_cloud ? bh * 0.04 : 0.0);
+			time_y = text_y + desc_fs * 1.30;
+		} else {
+			text_y = cy + (is_cloud ? bh * 0.08 : 0.0)
+			         - (double)(desc_fs + time_fs) * 0.35;
+			time_y = text_y + desc_fs * 1.30;
+		}
 
 		draw_text(cr, label, t2g_get_description_font(root), desc_fs,
-		          cx, text_y, text_col, text_alpha, W);
+		          cx, text_y, text_col, content_alpha, W);
 		draw_text(cr, time_str, t2g_get_time_font(root), time_fs,
-		          cx, time_y, text_col, 0.75 * text_alpha, W);
+		          cx, time_y, text_col, 0.75 * content_alpha, W);
 	}
+
+	/* Undo the fan rotation transform */
+	if (fan_angle != 0.0)
+		cairo_restore(cr);
 }
 
 /* ── Progress bar ───────────────────────────────────────────────────── */
