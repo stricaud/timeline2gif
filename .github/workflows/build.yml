@@ -186,16 +186,6 @@ jobs:
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
 
-      - name: Generate app icon (ico from SVG)
-        run: |
-          # Convert SVG to PNG at multiple sizes, then pack into .ico with ImageMagick
-          for size in 16 32 48 64 128 256; do
-            rsvg-convert -w $size -h $size ui/icon.svg -o /tmp/icon_${size}.png
-          done
-          convert /tmp/icon_16.png /tmp/icon_32.png /tmp/icon_48.png \
-                  /tmp/icon_64.png /tmp/icon_128.png /tmp/icon_256.png \
-                  ui/AppIcon.ico
-
       - name: Build NSIS installer
         shell: pwsh
         working-directory: ${{ github.workspace }}
