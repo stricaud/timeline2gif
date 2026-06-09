@@ -180,6 +180,7 @@ jobs:
       - name: Build NSIS installer
         shell: pwsh
         run: |
+          choco install nsis --no-progress -y
           $tag = $env:GITHUB_REF_NAME
           $version = if ($tag -match '^v') { $tag.TrimStart('v') } else { 'dev' }
           & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version windows-installer.nsi
