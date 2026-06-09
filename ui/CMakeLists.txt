@@ -24,11 +24,11 @@ target_link_libraries(t2g-ui PRIVATE t2g ${wxWidgets_LIBRARIES})
 
 # On macOS, embed the bundle name so it shows nicely in the dock
 set_target_properties(t2g-ui PROPERTIES
-    MACOSX_BUNDLE_BUNDLE_NAME    "timeline2gif Studio"
-    MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.timeline2gif.studio"
+    MACOSX_BUNDLE_BUNDLE_NAME    "Timeline Studio"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.timeline2gif.timeline-studio"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
     MACOSX_BUNDLE_BUNDLE_VERSION       "1"
-    OUTPUT_NAME "t2g-ui")
+    OUTPUT_NAME "Timeline")
 
 # App icon — icns is generated from ui/icon.svg before cmake runs in CI,
 # or can be pre-generated locally: see README for instructions.

@@ -1,30 +1,40 @@
-; timeline2gif Windows Installer
+; Timeline Studio Windows Installer
 ; Build: makensis /DAPP_VERSION=1.2.3 windows-installer.nsi
 
 !ifndef APP_VERSION
   !define APP_VERSION "dev"
 !endif
 
-!define APP_NAME    "timeline2gif Studio"
-!define APP_EXE     "t2g-ui.exe"
+!define APP_NAME    "Timeline Studio"
+!define APP_EXE     "Timeline.exe"
 !define CLI_EXE     "timeline2gif.exe"
 !define PUBLISHER   "Seb Tricaud"
-!define REG_KEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\timeline2gif"
+!define REG_KEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\TimelineStudio"
 !define DIST_DIR    "dist"
 
 Name            "${APP_NAME} ${APP_VERSION}"
 OutFile         "timeline2gif-windows-x86_64-setup.exe"
-InstallDir      "$PROGRAMFILES64\timeline2gif"
-InstallDirRegKey HKLM "Software\timeline2gif" "InstallDir"
+InstallDir      "$PROGRAMFILES64\Timeline Studio"
+InstallDirRegKey HKLM "Software\Timeline Studio" "InstallDir"
 RequestExecutionLevel admin
 SetCompressor   /SOLID lzma
 Unicode         True
 
+; Use app icon for installer/uninstaller if available
+!ifdef ICON_FILE
+  Icon          "${ICON_FILE}"
+  UninstallIcon "${ICON_FILE}"
+!endif
+
 !include "MUI2.nsh"
 
 !define MUI_ABORTWARNING
-!define MUI_FINISHPAGE_RUN          "$INSTDIR\${APP_EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT     "Launch timeline2gif Studio"
+!ifdef ICON_FILE
+  !define MUI_ICON   "${ICON_FILE}"
+  !define MUI_UNICON "${ICON_FILE}"
+!endif
+!define MUI_FINISHPAGE_RUN      "$INSTDIR\${APP_EXE}"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch Timeline Studio"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -37,7 +47,7 @@ Unicode         True
 !insertmacro MUI_LANGUAGE "English"
 
 ; ── Install ────────────────────────────────────────────────────────────────
-Section "timeline2gif Studio" SecMain
+Section "Timeline Studio" SecMain
     SectionIn RO
 
     SetOutPath "$INSTDIR"
@@ -64,9 +74,9 @@ Section "timeline2gif Studio" SecMain
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     ; Start Menu shortcuts
-    CreateDirectory "$SMPROGRAMS\timeline2gif"
-    CreateShortCut  "$SMPROGRAMS\timeline2gif\timeline2gif Studio.lnk" "$INSTDIR\${APP_EXE}"
-    CreateShortCut  "$SMPROGRAMS\timeline2gif\Uninstall.lnk"           "$INSTDIR\uninstall.exe"
+    CreateDirectory "$SMPROGRAMS\Timeline Studio"
+    CreateShortCut  "$SMPROGRAMS\Timeline Studio\Timeline Studio.lnk" "$INSTDIR\${APP_EXE}"
+    CreateShortCut  "$SMPROGRAMS\Timeline Studio\Uninstall.lnk"       "$INSTDIR\uninstall.exe"
 SectionEnd
 
 ; ── Uninstall ──────────────────────────────────────────────────────────────
@@ -80,10 +90,10 @@ Section "Uninstall"
     RMDir /r "$INSTDIR\samples"
     RMDir "$INSTDIR"
 
-    Delete "$SMPROGRAMS\timeline2gif\timeline2gif Studio.lnk"
-    Delete "$SMPROGRAMS\timeline2gif\Uninstall.lnk"
-    RMDir  "$SMPROGRAMS\timeline2gif"
+    Delete "$SMPROGRAMS\Timeline Studio\Timeline Studio.lnk"
+    Delete "$SMPROGRAMS\Timeline Studio\Uninstall.lnk"
+    RMDir  "$SMPROGRAMS\Timeline Studio"
 
     DeleteRegKey HKLM "${REG_KEY}"
-    DeleteRegKey /ifempty HKLM "Software\timeline2gif"
+    DeleteRegKey /ifempty HKLM "Software\Timeline Studio"
 SectionEnd

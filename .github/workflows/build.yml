@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install cmake bison flex libgd librsvg pango webp wxwidgets create-dmg
+          brew install cmake bison flex libgd librsvg pango webp wxwidgets create-dmg dylibbundler
 
       - name: Put Homebrew bison and flex first in PATH
         # macOS ships bison 2.3 — we need 3.x for %define api.prefix
@@ -56,25 +56,34 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
+      - name: Bundle dylibs into app
+        run: |
+          # Copy all non-system Homebrew dylibs into Contents/Frameworks/ and
+          # rewrite their install names so the app is fully self-contained.
+          dylibbundler -od -b \
+            -x "build/ui/Timeline.app/Contents/MacOS/Timeline" \
+            -d "build/ui/Timeline.app/Contents/Frameworks/" \
+            -p "@executable_path/../Frameworks/"
+
       - name: Create DMG
         run: |
           # Staging area — app bundle + CLI + samples
           mkdir -p dmg_stage/samples/icons
-          cp -r "build/ui/t2g-ui.app" dmg_stage/
-          cp build/src/timeline2gif    dmg_stage/
+          cp -r "build/ui/Timeline.app" dmg_stage/
+          cp build/src/timeline2gif     dmg_stage/
           cp QUICKSTART.txt            dmg_stage/
           cp samples/*.tig             dmg_stage/samples/ 2>/dev/null || true
           cp samples/icons/*.svg       dmg_stage/samples/icons/
 
           # DMG with drag-to-Applications layout
           create-dmg \
-            --volname "timeline2gif Studio" \
+            --volname "Timeline Studio" \
             --volicon "ui/AppIcon.icns" \
             --window-pos 200 130 \
             --window-size 620 420 \
             --icon-size 100 \
-            --icon "t2g-ui.app" 160 200 \
-            --hide-extension "t2g-ui.app" \
+            --icon "Timeline.app" 160 200 \
+            --hide-extension "Timeline.app" \
             --app-drop-link 460 200 \
             "timeline2gif-macos-arm64.dmg" \
             "dmg_stage/"
@@ -111,7 +120,7 @@ jobs:
         run: |
           mkdir -p dist/samples/icons
           cp build/src/timeline2gif dist/
-          cp build/ui/t2g-ui         dist/
+          cp build/ui/Timeline       dist/
           cp QUICKSTART.txt dist/
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
@@ -164,10 +173,10 @@ jobs:
         run: |
           mkdir -p dist/samples/icons
           cp build/src/timeline2gif.exe dist/
-          cp build/ui/t2g-ui.exe        dist/
+          cp build/ui/Timeline.exe      dist/
 
           # Collect all MinGW DLLs needed by either binary
-          { ldd dist/timeline2gif.exe; ldd dist/t2g-ui.exe; } \
+          { ldd dist/timeline2gif.exe; ldd dist/Timeline.exe; } \
             | grep '/mingw64/bin' \
             | sed 's/.*=> //' | sed 's/ (.*//' \
             | sort -u \
@@ -177,6 +186,16 @@ jobs:
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
 
+      - name: Generate app icon (ico from SVG)
+        run: |
+          # Convert SVG to PNG at multiple sizes, then pack into .ico with ImageMagick
+          for size in 16 32 48 64 128 256; do
+            rsvg-convert -w $size -h $size ui/icon.svg -o /tmp/icon_${size}.png
+          done
+          convert /tmp/icon_16.png /tmp/icon_32.png /tmp/icon_48.png \
+                  /tmp/icon_64.png /tmp/icon_128.png /tmp/icon_256.png \
+                  ui/AppIcon.ico
+
       - name: Build NSIS installer
         shell: pwsh
         working-directory: ${{ github.workspace }}
@@ -184,7 +203,8 @@ jobs:
           choco install nsis --no-progress -y
           $tag = $env:GITHUB_REF_NAME
           $version = if ($tag -match '^v') { $tag.TrimStart('v') } else { 'dev' }
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version "$env:GITHUB_WORKSPACE\windows-installer.nsi"
+          $icon = "$env:GITHUB_WORKSPACE\ui\AppIcon.ico"
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version /DICON_FILE=$icon "$env:GITHUB_WORKSPACE\windows-installer.nsi"
 
       - uses: actions/upload-artifact@v4
         with:
