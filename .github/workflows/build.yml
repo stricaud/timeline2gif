@@ -179,6 +179,7 @@ jobs:
 
       - name: Build NSIS installer
         shell: pwsh
+        working-directory: ${{ github.workspace }}
         run: |
           choco install nsis --no-progress -y
           $tag = $env:GITHUB_REF_NAME
