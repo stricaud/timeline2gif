@@ -13,7 +13,7 @@ env:
 # Produces:
 #   timeline2gif-macos-arm64.dmg   — macOS DMG installer (CLI + GUI app bundle)
 #   timeline2gif-linux-x86_64.tar.gz
-#   timeline2gif-windows-x86_64.zip
+#   timeline2gif-windows-x86_64-setup.exe  — Windows NSIS installer
 
 jobs:
 
@@ -160,7 +160,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
-      - name: Collect DLLs and package
+      - name: Collect DLLs
         run: |
           mkdir -p dist/samples/icons
           cp build/src/timeline2gif.exe dist/
@@ -177,13 +177,17 @@ jobs:
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
 
-          # 7-Zip is pre-installed on every GitHub Windows runner
-          cd dist && "/c/Program Files/7-Zip/7z.exe" a -tzip ../timeline2gif-windows-x86_64.zip .
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = if ($tag -match '^v') { $tag.TrimStart('v') } else { 'dev' }
+          makensis /DAPP_VERSION=$version windows-installer.nsi
 
       - uses: actions/upload-artifact@v4
         with:
           name: timeline2gif-windows-x86_64
-          path: timeline2gif-windows-x86_64.zip
+          path: timeline2gif-windows-x86_64-setup.exe
 
   # ── GitHub Release (only on v* tags) ─────────────────────────────────────
   release:
@@ -207,4 +211,4 @@ jobs:
             --generate-notes \
             "artifacts/timeline2gif-macos-arm64/timeline2gif-macos-arm64.dmg" \
             "artifacts/timeline2gif-linux-x86_64/timeline2gif-linux-x86_64.tar.gz" \
-            "artifacts/timeline2gif-windows-x86_64/timeline2gif-windows-x86_64.zip"
+            "artifacts/timeline2gif-windows-x86_64/timeline2gif-windows-x86_64-setup.exe"
