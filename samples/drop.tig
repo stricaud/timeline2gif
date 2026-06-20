@@ -1,0 +1,91 @@
+# samples/drop.tig — per-event "heavy drop" timeline wobble
+#
+# The drop wobble can be set globally or per event, so a "heavy" milestone
+# can land with a thud while lighter steps glide in flat.
+#
+#   timeline.drop         yes      enable globally for every event
+#   timeline.drop_amount  <px>     global peak dip (default 12)
+#   event.drop            yes|no   override for the next event only
+#   event.drop_amount     <px>     per-event dip override
+#
+# Here the effect is OFF globally and switched ON only for the major
+# releases (v1.0 and v2.0), which land heavier than the minor ones.
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/drop.tig  samples/drop.webp
+
+# ── Canvas ──────────────────────────────────────────────────────────────
+image.width  960
+image.height 460
+
+# ── Forged-steel theme ───────────────────────────────────────────────────
+theme.background  argb(255,20,22,28)
+theme.background2 argb(255,10,11,15)
+theme.accent      argb(255,255,170,60)
+theme.text        argb(255,236,228,214)
+
+# ── Layout ───────────────────────────────────────────────────────────────
+timeline.position 240
+
+description.font_size 13
+time.font_size        10
+
+# ── Animation ────────────────────────────────────────────────────────────
+speed.frames     5      # cs per frame — a touch slower so the wobble reads
+speed.nextitem   70
+speed.loop_pause 250
+camera.scroll    yes
+item.spacing     200
+
+# Drop wobble stays OFF globally; major releases opt in per-event below.
+timeline.drop yes      # comment this out to compare — only heavy items drop
+
+# ── Progress bar ─────────────────────────────────────────────────────────
+progress.show  yes
+progress.color argb(255,255,170,60)
+
+# ════════════════════════════════════════════════════════════════════════
+# Minor steps glide in flat; major releases (v1.0, v2.0) land heavy.
+# ════════════════════════════════════════════════════════════════════════
+
+# Minor — no wobble
+event.drop       no
+event.image      "icons/flag.svg"
+event.image_size 26
+event.dot_color  argb(255,180,185,195)
+event.text_color argb(255,205,210,220)
+"v0.1" "First commit"
+
+# Minor — no wobble
+event.drop       no
+event.image      "icons/rocket.svg"
+event.image_size 26
+event.dot_color  argb(255,120,200,255)
+event.text_color argb(255,180,220,255)
+"v0.5" "Beta ships"
+
+# MAJOR — heavy drop
+event.drop        yes
+event.drop_amount 20
+event.image      "icons/star.svg"
+event.image_size 30
+event.dot_color  argb(255,255,220,90)
+event.text_color argb(255,255,235,160)
+"v1.0" "Stable release lands"
+
+# Minor — no wobble
+event.drop       no
+event.image      "icons/shield.svg"
+event.image_size 26
+event.dot_color  argb(255,90,210,140)
+event.text_color argb(255,150,240,190)
+"v1.4" "Security audit passed"
+
+# MAJOR — heavy drop
+event.drop        yes
+event.drop_amount 22
+event.image      "icons/lock.svg"
+event.image_size 30
+event.dot_color  argb(255,200,150,255)
+event.text_color argb(255,225,195,255)
+"v2.0" "LTS branch sealed"

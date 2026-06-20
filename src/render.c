@@ -391,6 +391,19 @@ static void draw_background_colors(cairo_t *cr, t2g_t *root,
 
 /* ── Timeline line with ticks and per-segment colour ────────────────── */
 
+/* Damped vertical wobble for the "heavy drop" timeline effect.
+   prog runs 0→1 across a new event's entrance frames. The line is pushed
+   down on impact (cairo +y), oscillates with decreasing amplitude, and
+   settles to exactly 0 at prog=1 so the held final frame is at rest.
+   Frequency 3 makes sin() land on zero at prog = 1/3, 2/3 and 1. */
+static double timeline_drop_offset(double prog, double amount)
+{
+	double t     = clamp01(prog);
+	double osc   = sin(t * 3.0 * M_PI);
+	double decay = exp(-3.0 * t);
+	return amount * osc * decay;
+}
+
 static void draw_timeline_line(cairo_t *cr, t2g_t *root,
                                 t2g_t *first_event, int committed_count,
                                 double camera_x)
@@ -1102,21 +1115,36 @@ static void render_body(cairo_t *cr, t2g_t *root,
 	t2gcolor_t bg1, bg2;
 	resolve_background(root, first_event, committed_count, &bg1, &bg2);
 
-	/* If the animating event changes the background, fade it in */
+	/* Advance to the event currently animating in (if any). */
+	t2g_t *animev = NULL;
 	if (frame >= 0) {
-		double prog = (double)frame / (FRAMES_PER_ITEM - 1);
-		/* advance to the animating event */
-		t2g_t *animev = first_event;
+		animev = first_event;
 		for (int i = 0; i < committed_count && animev; i++, animev = animev->next)
 			;
-		if (animev && animev->has_ev_background) {
-			double fade = ease_out_cubic(clamp01((prog - 0.1) / 0.7));
-			bg1 = lerp_color(bg1, animev->ev_background,  fade);
-			bg2 = lerp_color(bg2, animev->ev_background2, fade);
-		}
+	}
+
+	/* If the animating event changes the background, fade it in */
+	if (animev && animev->has_ev_background) {
+		double prog = (double)frame / (FRAMES_PER_ITEM - 1);
+		double fade = ease_out_cubic(clamp01((prog - 0.1) / 0.7));
+		bg1 = lerp_color(bg1, animev->ev_background,  fade);
+		bg2 = lerp_color(bg2, animev->ev_background2, fade);
 	}
 
 	draw_background_colors(cr, root, bg1, bg2);
+
+	/* "Heavy drop" wobble: shift the timeline and everything anchored to it
+	   (line, dots, connectors, labels) by a damped vertical offset while a
+	   new event lands. Enabled per-event (event.drop) or globally
+	   (timeline.drop). Background, progress bar and split panel stay fixed. */
+	double drop = (animev && t2g_event_drop(root, animev))
+		? timeline_drop_offset((double)frame / (FRAMES_PER_ITEM - 1),
+		                       t2g_event_drop_amount(root, animev))
+		: 0.0;
+
+	cairo_save(cr);
+	cairo_translate(cr, 0, drop);
+
 	draw_timeline_line(cr, root, first_event, committed_count, camera_x);
 
 	/* Pre-compute non-overlapping label positions for all visible events */
@@ -1137,6 +1165,8 @@ static void render_body(cairo_t *cr, t2g_t *root,
 	if (frame >= 0 && iter)
 		draw_animating_event(cr, root, iter, current_index, frame, camera_x,
 		                     label_cx[committed_count]);
+
+	cairo_restore(cr);
 
 	draw_progress_bar(cr, root, first_event, committed_count, frame);
 

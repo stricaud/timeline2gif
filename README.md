@@ -12,6 +12,28 @@ slide deck, README, or website — no design tools, no timeline editor.
 
 ---
 
+## New: heavy-drop wobble
+
+![Per-event heavy-drop wobble](samples/drop.webp)
+
+Turn on `timeline.drop` and each event lands like a heavy object: the line
+**dips, bounces, and settles**. It's configurable **per event** — let the major
+milestones land with a thud while minor steps glide in flat:
+
+```
+event.drop        yes      # this event wobbles…
+event.drop_amount 20       # …with a deeper dip
+"v1.0" "Stable release lands"
+
+event.drop no              # …this one glides in flat
+"v1.4" "Security audit passed"
+```
+
+<sup>*Generated from [`samples/drop.tig`](samples/drop.tig) — only the major
+releases (`v1.0`, `v2.0`) opt into the drop.*</sup>
+
+---
+
 ## See it in action
 
 <table>
@@ -83,6 +105,7 @@ its own colour, or swap the dot for an icon.
 
 | | |
 |---|---|
+| **Heavy-drop wobble** | Events land like a dropped weight — the line dips, bounces, settles; per-event opt-in |
 | **Animated callouts** | Spotlight each event as a card that fades in, pauses, and exits with `funnel` · `zoom` · `float` · `fan` |
 | **Transitions** | `fade` · `wipe` · `dissolve` · `pixelize` between events |
 | **Split-screen panel** | Side list of all events — past, present, and dimmed future |
@@ -258,6 +281,7 @@ progress.color  argb(255,70,130,180)
 | Sample | Shows off |
 |--------|-----------|
 | [`samples/threat.tig`](samples/threat.tig) | APT intrusion — icons, segment colours, time gaps |
+| [`samples/drop.tig`](samples/drop.tig) | Per-event heavy-drop wobble |
 | [`samples/callout.tig`](samples/callout.tig) | Callout spotlights with all four exit effects |
 | [`samples/image_callout.tig`](samples/image_callout.tig) | Images inside callouts and connector labels |
 | [`samples/split.tig`](samples/split.tig) | Split-screen event panel |

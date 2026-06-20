@@ -25,6 +25,9 @@ static struct {
 	int        x_pos;
 	int        has_event_pause;
 	int        event_pause;
+	int        has_drop;       /* per-event timeline.drop override */
+	int        drop;
+	int        drop_amount;    /* per-event drop_amount override (0 = inherit) */
 	char      *dot_image;
 	int        dot_image_size;
 	char      *callout_effect;   /* per-event callout exit effect override */
@@ -56,6 +59,8 @@ static void pending_apply(t2g_t *ev)
 	}
 	if (pending.x_pos)            { ev->x_pos               = pending.x_pos; }
 	if (pending.has_event_pause)  { ev->has_event_pause = 1; ev->event_pause = pending.event_pause; }
+	if (pending.has_drop)         { ev->has_ev_drop = 1; ev->ev_drop = pending.drop; }
+	if (pending.drop_amount)      { ev->ev_drop_amount = pending.drop_amount; }
 	if (pending.dot_image)        { ev->dot_image            = pending.dot_image; pending.dot_image = NULL; }
 	if (pending.dot_image_size)   { ev->dot_image_size       = pending.dot_image_size; }
 	if (pending.callout_effect)   {
@@ -139,6 +144,10 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 			timeline->camera_scroll = (strcmp($4, "no")    != 0 &&
 			                           strcmp($4, "false") != 0 &&
 			                           strcmp($4, "0")     != 0);
+		} else if (!strcmp($1, "timeline") && !strcmp($3, "drop")) {
+			timeline->timeline_drop = (strcmp($4, "no")    != 0 &&
+			                           strcmp($4, "false") != 0 &&
+			                           strcmp($4, "0")     != 0);
 		} else if (!strcmp($1, "output") && !strcmp($3, "format")) {
 			free(timeline->output_format);
 			timeline->output_format = strdup($4);
@@ -159,6 +168,13 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 		} else if (!strcmp($1, "transition") && !strcmp($3, "style")) {
 			free(timeline->transition_style);
 			timeline->transition_style = strdup($4);
+
+		/* Per-event "heavy drop" wobble override */
+		} else if (!strcmp($1, "event") && !strcmp($3, "drop")) {
+			pending.has_drop = 1;
+			pending.drop = (strcmp($4, "no")    != 0 &&
+			                strcmp($4, "false") != 0 &&
+			                strcmp($4, "0")     != 0);
 
 		/* Per-event callout exit effect override */
 		} else if (!strcmp($1, "event") && !strcmp($3, "callout_effect")) {
@@ -294,6 +310,8 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			else if (!strcmp($3, "height")) timeline->height = $4;
 		} else if (!strcmp($1, "timeline") && !strcmp($3, "position")) {
 			timeline->timeline_pos_y = $4;
+		} else if (!strcmp($1, "timeline") && !strcmp($3, "drop_amount")) {
+			timeline->timeline_drop_amount = $4;
 		} else if (!strcmp($1, "speed")) {
 			if      (!strcmp($3, "frames"))     timeline->speed_frames     = $4;
 			else if (!strcmp($3, "nextitem"))   timeline->speed_nextitem   = $4;
@@ -330,6 +348,7 @@ setting_int: TOK_WORD TOK_DOT TOK_WORD TOK_INTEGER
 			else if (!strcmp($3, "callout_image_size")) pending.callout_image_size = $4;
 			else if (!strcmp($3, "label_image_size"))  pending.label_image_size    = $4;
 			else if (!strcmp($3, "pause"))           { pending.has_event_pause = 1; pending.event_pause = $4; }
+			else if (!strcmp($3, "drop_amount"))       pending.drop_amount         = $4;
 		}
 
 		free($1); free($3);

@@ -77,7 +77,7 @@ t2g_t *t2g_new(void)
 	/* Canvas */
 	t2g->width  = 800;
 	t2g->height = 500;
-	t2g->timeline_pos_y = t2g->height / 2;
+	t2g->timeline_pos_y = t2g->height / 2 + 10;  /* centre + small padding for labels above */
 
 	/* Timeline color */
 	t2g->timeline_color = (t2gcolor_t){ 255, 0, 0, 0 };
@@ -99,13 +99,17 @@ t2g_t *t2g_new(void)
 
 	/* Speed (centiseconds) */
 	t2g->speed_frames   = 5;
-	t2g->speed_nextitem = 50;
+	t2g->speed_nextitem = 60;
 
 	/* Layout */
-	t2g->item_spacing = 160;
+	t2g->item_spacing = 180;
 
 	/* Camera */
 	t2g->camera_scroll = 1;
+
+	/* Timeline drop wobble (opt-in) */
+	t2g->timeline_drop        = 0;
+	t2g->timeline_drop_amount = 12;
 
 	/* Split-screen */
 	t2g->split_width = 260;
@@ -197,4 +201,18 @@ int t2g_get_time_font_size(t2g_t *t2g)
 	if (t2g->root->time_font_size)
 		return t2g->root->time_font_size;
 	return 11;
+}
+
+int t2g_event_drop(t2g_t *root, t2g_t *ev)
+{
+	if (ev && ev->has_ev_drop)
+		return ev->ev_drop;
+	return root->timeline_drop;
+}
+
+int t2g_event_drop_amount(t2g_t *root, t2g_t *ev)
+{
+	if (ev && ev->ev_drop_amount)
+		return ev->ev_drop_amount;
+	return root->timeline_drop_amount;
 }

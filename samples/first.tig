@@ -1,34 +1,7 @@
-# Canvas
-image.width  800
-image.height 500
-
-# Theme colors (argb format)
-theme.background  argb(255,22,33,62)
-theme.background2 argb(255,10,25,47)
-theme.accent      argb(255,0,180,216)
-theme.text        argb(255,224,224,224)
-
-# Timeline
-timeline.position 260
-
-# Fonts — Pango family names; use any name installed on your system
-# time.font       Arial
-# description.font "Liberation Sans"
-description.font_size 13
-time.font_size        11
-
-# Speed (centiseconds per frame)
-speed.frames   5
-speed.nextitem 60
-
-# Spacing between events in world space (pixels)
-item.spacing 180
-
-# Camera panning (yes/no)
-camera.scroll yes
-
-# Output format: gif, webp, apng  (also auto-detected from file extension)
-# output.format gif
+# The simplest possible timeline — just events.
+# Everything else (canvas, theme, fonts, spacing, speed) uses sensible
+# built-in defaults. Add settings only when you want to override them;
+# see docs/syntax.md for the full list.
 
 "Jan 2020" "My story begins!"
 "Feb 2020" "We all went to RSA"

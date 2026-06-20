@@ -54,6 +54,11 @@ struct _t2g_t {
 	/* Camera */
 	int camera_scroll;  /* boolean: pan to reveal each event */
 
+	/* Timeline "drop" wobble: when a new event lands, the line dips and
+	   oscillates like a heavy object was dropped on it, then settles. */
+	int timeline_drop;        /* boolean: enable the effect */
+	int timeline_drop_amount; /* peak vertical displacement in px (default 12) */
+
 	/* Automatic x-positioning from parsed time strings.
 	   When time_format is set, event.x is derived from the event's time
 	   string rather than sequential index.
@@ -125,6 +130,13 @@ struct _t2g_t {
 	int has_event_pause;
 	int event_pause;
 
+	/* Per-event "heavy drop" wobble override of timeline.drop.
+	   has_ev_drop=0 → inherit global; otherwise ev_drop is the on/off value.
+	   ev_drop_amount=0 → inherit global timeline.drop_amount. */
+	int has_ev_drop;
+	int ev_drop;
+	int ev_drop_amount;
+
 	/* Per-event image to draw instead of the standard dot */
 	char *dot_image;       /* path to PNG or SVG file */
 	int   dot_image_size;  /* icon diameter in pixels (0 = use DOT_RADIUS*4) */
@@ -162,5 +174,11 @@ char *t2g_get_description_font(t2g_t *t2g);
 int   t2g_get_description_font_size(t2g_t *t2g);
 char *t2g_get_time_font(t2g_t *t2g);
 int   t2g_get_time_font_size(t2g_t *t2g);
+
+/* Resolve the "heavy drop" wobble for the event currently animating in,
+   honouring a per-event event.drop / event.drop_amount override and
+   falling back to the global timeline.drop / timeline.drop_amount. */
+int   t2g_event_drop(t2g_t *root, t2g_t *ev);
+int   t2g_event_drop_amount(t2g_t *root, t2g_t *ev);
 
 #endif /* _T2G_H_ */

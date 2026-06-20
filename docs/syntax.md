@@ -88,8 +88,10 @@ argb(128,255,0,0)        # semi-transparent red
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `timeline.position` | integer | `height / 2` | Y coordinate of the horizontal timeline line |
+| `timeline.position` | integer | `height / 2 + 10` | Y coordinate of the horizontal timeline line |
 | `timeline.color` | argb | same as `theme.accent` | Color of the timeline line |
+| `timeline.drop` | `yes` / `no` | `no` | When a new event lands, the line dips and oscillates like a heavy object dropped on it, then settles |
+| `timeline.drop_amount` | integer | `12` | Peak vertical displacement of the drop wobble, in pixels |
 
 ---
 
@@ -373,6 +375,8 @@ event only, then reset.
 |---------|------|-------------|
 | `event.x`     | integer (px) | Explicit world-space x position; always overrides auto-positioning |
 | `event.pause` | integer (cs) | Hold duration after this event animates in; overrides `speed.nextitem` |
+| `event.drop`  | `yes` / `no` | Enable/disable the heavy-drop wobble for this event; overrides `timeline.drop` |
+| `event.drop_amount` | integer (px) | Per-event drop dip; overrides `timeline.drop_amount` |
 
 ### Icon
 
@@ -399,8 +403,10 @@ image.width   <px>
 image.height  <px>
 
 # Timeline
-timeline.position  <y-px>
-timeline.color     argb(A,R,G,B)
+timeline.position     <y-px>
+timeline.color        argb(A,R,G,B)
+timeline.drop         yes | no
+timeline.drop_amount  <px>
 
 # Theme
 theme.background   argb(A,R,G,B)
@@ -468,6 +474,8 @@ event.background        argb(A,R,G,B)
 event.background2       argb(A,R,G,B)
 event.x                 <world-px>
 event.pause             <cs>
+event.drop              yes | no
+event.drop_amount       <px>
 event.image             "path/to/file.svg"
 event.image_size        <px>
 event.callout_effect    none | funnel | zoom | float
