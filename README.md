@@ -1,12 +1,81 @@
 # timeline2gif
 
-Generate animated timeline graphics from a plain-text description file.
-Drop the result into a slide deck, README, or website.
+**Turn a plain-text file into a cinematic, animated timeline.**
+Write a few lines, get a polished GIF / WebP / APNG you can drop straight into a
+slide deck, README, or website — no design tools, no timeline editor.
 
-![APT Intrusion Timeline](samples/threat.webp)
+![Animated timeline with callout spotlights](samples/callout.webp)
 
-*APT intrusion timeline — threat detection, lateral movement, containment.
-Generated from [`samples/threat.tig`](samples/threat.tig).*
+<sup>*Each event spotlights as a card that fades in, pauses, then exits with a
+`funnel` · `zoom` · `float` · `fan` effect. Generated from
+[`samples/callout.tig`](samples/callout.tig).*</sup>
+
+---
+
+## See it in action
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+![Minimal timeline](samples/first.webp)
+
+**Minimal start** — a handful of lines produces a clean, themeable timeline.
+A good template to copy and build from.
+<br><sub>[`samples/first.tig`](samples/first.tig)</sub>
+
+</td>
+<td width="50%" valign="top">
+
+![Cinematic transitions](samples/transitions.webp)
+
+**Transitions** — blend between events with `fade`, `wipe`, `dissolve` or
+`pixelize`, with real-month positioning along the line.
+<br><sub>[`samples/transitions.tig`](samples/transitions.tig)</sub>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+![Split-screen tracker](samples/split.webp)
+
+**Split-screen tracker** — a side panel lists every event, dimming what's ahead
+and highlighting the current step, while the timeline animates beside it.
+<br><sub>[`samples/split.tig`](samples/split.tig)</sub>
+
+</td>
+<td width="50%" valign="top">
+
+![Image callouts](samples/image_callout.webp)
+
+**Image callouts** — drop SVG / PNG / GIF / JPEG art into callout cards and
+connector labels, with or without text.
+<br><sub>[`samples/image_callout.tig`](samples/image_callout.tig)</sub>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+![Smart pacing with progress bar](samples/pause.webp)
+
+**Smart pacing + progress bar** — hold longer on the steps that matter; a
+progress bar shows how far through the story you are.
+<br><sub>[`samples/pause.tig`](samples/pause.tig)</sub>
+
+</td>
+<td width="50%" valign="top">
+
+![Per-event styling](samples/custom.webp)
+
+**Per-event styling** — give every dot, label, connector and timeline segment
+its own colour, or swap the dot for an icon.
+<br><sub>[`samples/custom.tig`](samples/custom.tig)</sub>
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -14,13 +83,16 @@ Generated from [`samples/threat.tig`](samples/threat.tig).*
 
 | | |
 |---|---|
+| **Animated callouts** | Spotlight each event as a card that fades in, pauses, and exits with `funnel` · `zoom` · `float` · `fan` |
+| **Transitions** | `fade` · `wipe` · `dissolve` · `pixelize` between events |
+| **Split-screen panel** | Side list of all events — past, present, and dimmed future |
+| **Progress bar** | Optional bar tracking position through the timeline |
 | **Themeable** | Custom background gradient, accent colour, text colour |
-| **Per-event styling** | Each dot, connector line, and label can have its own colour |
-| **SVG & PNG icons** | Replace dots with any SVG or PNG icon |
-| **Real time positions** | Place events at arbitrary x positions to reflect actual time gaps |
+| **Per-event styling** | Each dot, connector line, label, and segment can have its own colour |
+| **SVG · PNG · GIF · JPEG** | Replace dots, fill callouts, or label connectors with any image |
+| **Real-time positions** | Auto-position from dates, or place events at explicit x to reflect real gaps |
 | **Fast transit** | Camera sprints across large time gaps automatically |
-| **Segmented timeline** | Colour the timeline line differently between any two events |
-| **Transitions** | Fade, wipe, dissolve, or pixelize between events |
+| **Smart pacing** | Per-event pauses and a loop pause for comfortable reading |
 | **Output formats** | GIF · WebP · APNG |
 
 ---
@@ -37,6 +109,12 @@ make
 ./src/timeline2gif  my-timeline.tig  output.gif
 ./src/timeline2gif  my-timeline.tig  output.webp   # much smaller
 ./src/timeline2gif  my-timeline.tig  output.apng
+```
+
+Or render any of the bundled samples from the repository root:
+
+```sh
+./build/src/timeline2gif  samples/callout.tig  out.webp
 ```
 
 ---
@@ -64,8 +142,9 @@ description.font_size 13
 time.font_size        10
 
 # Animation speed (centiseconds)
-speed.frames   4
-speed.nextitem 65
+speed.frames     4
+speed.nextitem   65
+speed.loop_pause 300   # hold on the final frame before looping
 
 # 1 unit = 1 hour; 18 px/hour
 item.spacing 18
@@ -74,8 +153,11 @@ camera.scroll yes
 # Between-event transitions: none | fade | wipe | dissolve | pixelize
 transition.style      wipe
 transition.frames     16
-# dissolve / pixelize only: pixel block size (smaller = finer grain)
-transition.block_size 8
+transition.block_size 8   # dissolve / pixelize grain (smaller = finer)
+
+# Optional progress bar
+progress.show  yes
+progress.color argb(255,70,130,180)
 
 # Events
 "Day 1  08:00" "Phishing email — initial access"
@@ -86,7 +168,7 @@ transition.block_size 8
 
 ### Colors — `argb(alpha, red, green, blue)`
 
-All color values use `argb()` with components 0–255.  
+All color values use `argb()` with components 0–255.
 `alpha=255` is fully opaque.  **No spaces inside the parentheses.**
 
 ---
@@ -116,6 +198,10 @@ event.x 504
 event.image      "icons/shield.svg"
 event.image_size 28
 "Day 3  00:00" "Threat contained"
+
+# Hold longer on an important step (centiseconds)
+event.pause 400
+"Day 3  00:00" "Threat contained"
 ```
 
 Large `event.x` gaps (> 3 × `item.spacing`) automatically trigger
@@ -123,20 +209,62 @@ a fast camera sprint, making the time distance visible to viewers.
 
 ---
 
+## Callout spotlights
+
+Turn each event into a centred card that fades in, pauses for reading, then
+exits with an effect — great for storytelling decks.
+
+```
+callout.shape   rounded         # rectangle | rounded | cloud
+callout.pause   150             # centiseconds to hold the card
+callout.effect  funnel          # none | funnel | zoom | float | fan
+callout.color   argb(255,5,18,38)
+callout.border  argb(255,0,210,190)
+
+# Per-event exit effect and optional image inside the card
+event.callout_effect zoom
+event.callout_image      "icons/rocket.svg"
+event.callout_image_size 60
+"2022" "Generative AI goes mainstream"
+```
+
+| Effect | Motion on exit |
+|--------|----------------|
+| `none`   | Plain fade-out |
+| `funnel` | Card contracts toward the event dot |
+| `zoom`   | Card scales to zero at its centre |
+| `float`  | Card drifts upward while fading |
+| `fan`    | Card spins (2.5 turns) while contracting to the dot |
+
+---
+
+## Split-screen & progress bar
+
+```
+# Side panel listing all events
+split.show       yes
+split.width      260
+split.background  argb(255,10,12,20)
+
+# Progress bar across the bottom
+progress.show   yes
+progress.color  argb(255,70,130,180)
+```
+
+---
+
 ## More examples
 
-| Sample | Description |
-|--------|-------------|
+| Sample | Shows off |
+|--------|-----------|
 | [`samples/threat.tig`](samples/threat.tig) | APT intrusion — icons, segment colours, time gaps |
+| [`samples/callout.tig`](samples/callout.tig) | Callout spotlights with all four exit effects |
+| [`samples/image_callout.tig`](samples/image_callout.tig) | Images inside callouts and connector labels |
+| [`samples/split.tig`](samples/split.tig) | Split-screen event panel |
+| [`samples/pause.tig`](samples/pause.tig) | Per-event pacing and the progress bar |
 | [`samples/transitions.tig`](samples/transitions.tig) | Dissolve transitions, real-month positioning |
 | [`samples/custom.tig`](samples/custom.tig) | Per-event colours and SVG icons |
 | [`samples/first.tig`](samples/first.tig) | Minimal example, good starting point |
-
-Run any of them from the repository root:
-
-```sh
-./build/src/timeline2gif  samples/threat.tig  samples/threat.webp
-```
 
 Full syntax reference: [`docs/syntax.md`](docs/syntax.md)
 
@@ -149,7 +277,7 @@ Full syntax reference: [`docs/syntax.md`](docs/syntax.md)
 | Cairo 1.14+ | 2D rendering, anti-aliasing |
 | Pango / pangocairo | Font layout and rendering |
 | librsvg 2.52+ | SVG icon loading |
-| libgd | GIF encoding |
+| libgd | GIF encoding, raster image loading |
 | libwebp / libwebpmux | Animated WebP encoding |
 | zlib | APNG compression |
 | Bison + Flex | `.tig` file parser |
@@ -166,3 +294,5 @@ On Ubuntu/Debian:
 sudo apt install libcairo2-dev libpango1.0-dev librsvg2-dev \
                  libgd-dev libwebp-dev bison flex cmake
 ```
+</content>
+</invoke>
