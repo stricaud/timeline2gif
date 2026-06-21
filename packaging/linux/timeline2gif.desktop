@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Timeline Studio
+Comment=Edit and preview .tig timeline animations
+Exec=Timeline %f
+Icon=timeline2gif
+Terminal=false
+Categories=Graphics;AudioVideo;
+MimeType=application/x-tig;

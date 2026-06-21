@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- shared-mime-info definition for the .tig timeline source format.
+     Install to $XDG_DATA_HOME/mime/packages (or /usr/share/mime/packages)
+     and run `update-mime-database` on the parent mime directory. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+	<mime-type type="application/x-tig">
+		<comment>Timeline source</comment>
+		<glob pattern="*.tig"/>
+		<sub-class-of type="text/plain"/>
+		<icon name="timeline2gif"/>
+	</mime-type>
+</mime-info>
