@@ -391,37 +391,86 @@ static void draw_background_colors(cairo_t *cr, t2g_t *root,
 
 /* ── Timeline line with ticks and per-segment colour ────────────────── */
 
-/* Damped vertical wobble for the "heavy drop" timeline effect.
-   prog runs 0→1 across a new event's entrance frames. The line is pushed
-   down on impact (cairo +y), oscillates with decreasing amplitude, and
-   settles to exactly 0 at prog=1 so the held final frame is at rest.
-   Frequency 3 makes sin() land on zero at prog = 1/3, 2/3 and 1. */
-static double timeline_drop_offset(double prog, double amount)
+/* ── Spring-drop effect ─────────────────────────────────────────────────
+   A new event's dot falls from above, lands on the timeline, and the line
+   springs back and forth locally around the impact point before settling.
+
+   Two pieces work together:
+     • spring_drop()  — the temporal motion (fall, then damped oscillation)
+     • line_disp()    — the spatial falloff that keeps the wobble local to
+                        the "drop zone" rather than moving the whole line.   */
+
+#define SPRING_IMPACT_T 0.34   /* fraction of the entrance spent falling */
+
+/* Temporal motion for a spring drop at progress `prog` (0..1).
+   Outputs the dot's vertical offset from the line, and the line's local
+   dip amplitude at the impact point (0 until the dot lands).
+     fall_h  — how far above the line the dot starts (px)
+     dip_amp — peak local dip of the line on impact (px) */
+static void spring_drop(double prog, double fall_h, double dip_amp,
+                        double *dot_dy, double *line_amp)
 {
-	double t     = clamp01(prog);
-	double osc   = sin(t * 3.0 * M_PI);
-	double decay = exp(-3.0 * t);
-	return amount * osc * decay;
+	double t = clamp01(prog);
+	if (t < SPRING_IMPACT_T) {
+		/* Fall: ease-in (gravity-like accel) from fall_h above down to 0. */
+		double f = t / SPRING_IMPACT_T;
+		*dot_dy   = -fall_h * (1.0 - f * f);
+		*line_amp = 0.0;
+	} else {
+		/* Spring: damped oscillation. sin(3π·s) is 0 at s=0 and s=1, so the
+		   line starts and ends exactly at rest; e^(−3s) damps the bounces. */
+		double s   = (t - SPRING_IMPACT_T) / (1.0 - SPRING_IMPACT_T);
+		double osc = sin(3.0 * M_PI * s) * exp(-3.0 * s);
+		*line_amp = dip_amp * osc;
+		*dot_dy   = dip_amp * osc;   /* the dot rides the springing line */
+	}
+}
+
+/* Spatial falloff: a bell curve centred on the impact x so the deformation
+   stays in the drop zone and decays to nothing further along the line. */
+static double line_disp(double x, double cx, double amp, double sigma)
+{
+	if (amp == 0.0) return 0.0;
+	double d = x - cx;
+	return amp * exp(-(d * d) / (2.0 * sigma * sigma));
 }
 
 static void draw_timeline_line(cairo_t *cr, t2g_t *root,
                                 t2g_t *first_event, int committed_count,
-                                double camera_x)
+                                double camera_x,
+                                double disp_cx, double disp_amp,
+                                double disp_sigma)
 {
 	double ty = root->timeline_pos_y;
 	double w  = root->width;
 
+	/* Lay out the line path. When the drop zone is deforming (disp_amp != 0)
+	   the line is a curve sampled across x; otherwise it's a fast straight
+	   segment (keeps non-drop frames byte-identical). */
+	#define TIMELINE_PATH() do {                                           \
+		if (disp_amp == 0.0) {                                             \
+			cairo_move_to(cr, 0, ty);                                      \
+			cairo_line_to(cr, w, ty);                                      \
+		} else {                                                           \
+			cairo_move_to(cr, 0, ty + line_disp(0, disp_cx, disp_amp, disp_sigma)); \
+			for (double px = 4; px < w; px += 4)                           \
+				cairo_line_to(cr, px, ty + line_disp(px, disp_cx, disp_amp, disp_sigma)); \
+			cairo_line_to(cr, w, ty + line_disp(w, disp_cx, disp_amp, disp_sigma)); \
+		}                                                                  \
+	} while (0)
+
 	/* Glow */
 	cairo_set_line_width(cr, 8);
 	set_color(cr, root->theme_accent, 0.12);
-	cairo_move_to(cr, 0, ty); cairo_line_to(cr, w, ty);
+	TIMELINE_PATH();
 	cairo_stroke(cr);
 
 	/* Main line */
 	cairo_set_line_width(cr, 2);
 	set_color(cr, root->theme_accent, 0.85);
-	cairo_move_to(cr, 0, ty); cairo_line_to(cr, w, ty);
+	TIMELINE_PATH();
 	cairo_stroke(cr);
+	#undef TIMELINE_PATH
 
 	/* Minor tick marks */
 	int minor_step = root->item_spacing / 4;
@@ -434,7 +483,8 @@ static void draw_timeline_line(cairo_t *cr, t2g_t *root,
 	for (int wx = first_tick; wx < (int)world_right; wx += minor_step) {
 		double sx = wx - camera_x;
 		if (sx < -1 || sx > w + 1) continue;
-		cairo_move_to(cr, sx, ty - 4); cairo_line_to(cr, sx, ty + 4);
+		double dy = line_disp(sx, disp_cx, disp_amp, disp_sigma);
+		cairo_move_to(cr, sx, ty - 4 + dy); cairo_line_to(cr, sx, ty + 4 + dy);
 		cairo_stroke(cr);
 	}
 
@@ -452,8 +502,15 @@ static void draw_timeline_line(cairo_t *cr, t2g_t *root,
 					if (sx2 > w) sx2 = w;
 					cairo_set_line_width(cr, 2.5);
 					set_color(cr, seg->ev_timeline_color, 0.9);
-					cairo_move_to(cr, sx1, ty);
-					cairo_line_to(cr, sx2, ty);
+					if (disp_amp == 0.0) {
+						cairo_move_to(cr, sx1, ty);
+						cairo_line_to(cr, sx2, ty);
+					} else {
+						cairo_move_to(cr, sx1, ty + line_disp(sx1, disp_cx, disp_amp, disp_sigma));
+						for (double px = sx1 + 4; px < sx2; px += 4)
+							cairo_line_to(cr, px, ty + line_disp(px, disp_cx, disp_amp, disp_sigma));
+						cairo_line_to(cr, sx2, ty + line_disp(sx2, disp_cx, disp_amp, disp_sigma));
+					}
 					cairo_stroke(cr);
 				}
 			}
@@ -468,7 +525,8 @@ static void draw_timeline_line(cairo_t *cr, t2g_t *root,
 	for (int i = 0; i < committed_count && iter; i++, iter = iter->next) {
 		double ex = render_event_world_x(root, iter, i) - camera_x;
 		if (ex < -1 || ex > w + 1) continue;
-		cairo_move_to(cr, ex, ty - 9); cairo_line_to(cr, ex, ty + 9);
+		double dy = line_disp(ex, disp_cx, disp_amp, disp_sigma);
+		cairo_move_to(cr, ex, ty - 9 + dy); cairo_line_to(cr, ex, ty + 9 + dy);
 		cairo_stroke(cr);
 	}
 }
@@ -581,11 +639,27 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	double label_y = shelf_y + dir * 14;
 	double time_y  = ty - dir * 20;
 
-	double dot_t     = ease_out_elastic(clamp01(prog * 2.2));
-	double line_frac = ease_out_cubic(clamp01((prog - 0.20) / 0.45));
-	/* Text overlaps connector growth (starts at 42% not 62%) for a livelier
-	   sequence, and slides into place from the connector direction. */
-	double text_a    = ease_out_cubic(clamp01((prog - 0.42) / 0.58));
+	double dot_t, line_frac, text_a;
+	double dy = 0.0;        /* dot's vertical offset (fall + spring) */
+	int    drop_on = t2g_event_drop(root, ev);
+
+	if (drop_on) {
+		/* Spring drop: the dot falls from above, lands, and rides the line
+		   as it springs. Connector and label wait until it has landed so the
+		   drop reads clearly before the rest assembles. */
+		double fall_h = t2g_event_drop_amount(root, ev);
+		double line_amp;
+		spring_drop(prog, fall_h, fall_h * 0.30, &dy, &line_amp);
+		dot_t     = ease_out_cubic(clamp01(prog / (SPRING_IMPACT_T * 0.7)));
+		line_frac = ease_out_cubic(clamp01((prog - (SPRING_IMPACT_T + 0.06)) / 0.30));
+		text_a    = ease_out_cubic(clamp01((prog - (SPRING_IMPACT_T + 0.22)) / 0.40));
+	} else {
+		dot_t     = ease_out_elastic(clamp01(prog * 2.2));
+		line_frac = ease_out_cubic(clamp01((prog - 0.20) / 0.45));
+		/* Text overlaps connector growth (starts at 42% not 62%) for a livelier
+		   sequence, and slides into place from the connector direction. */
+		text_a    = ease_out_cubic(clamp01((prog - 0.42) / 0.58));
+	}
 
 	t2gcolor_t lc = line_color(root, ev);
 	t2gcolor_t tc = text_color(root, ev);
@@ -593,7 +667,7 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	/* Pulse ring */
 	if (dot_t > 0.05 && dot_t < 1.2 && !ev->dot_image) {
 		double pulse = dot_t > 1.0 ? 2.0 - dot_t : dot_t;
-		cairo_arc(cr, sx, ty, DOT_RADIUS + 8 * dot_t, 0, 2 * M_PI);
+		cairo_arc(cr, sx, ty + dy, DOT_RADIUS + 8 * dot_t, 0, 2 * M_PI);
 		cairo_set_line_width(cr, 1.5);
 		set_color(cr, dot_color(root, ev), 0.4 * (1.0 - pulse * 0.7));
 		cairo_stroke(cr);
@@ -604,11 +678,11 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 		double grown_shelf = ty + dir * (ch * line_frac);
 		double horiz_cx    = lerp(sx, label_cx, clamp01((line_frac - 0.7) / 0.3));
 		draw_connector(cr, sx, horiz_cx,
-		               ty + dir * DOT_RADIUS, grown_shelf, lc, line_frac);
+		               ty + dy + dir * DOT_RADIUS, grown_shelf, lc, line_frac);
 	}
 
 	/* Dot / icon */
-	draw_dot_element(cr, root, ev, sx, ty, dot_t, dot_t);
+	draw_dot_element(cr, root, ev, sx, ty + dy, dot_t, dot_t);
 
 	/* Label image + text slide in from the connector side while fading. */
 	if (text_a > 0.01) {
@@ -1133,19 +1207,24 @@ static void render_body(cairo_t *cr, t2g_t *root,
 
 	draw_background_colors(cr, root, bg1, bg2);
 
-	/* "Heavy drop" wobble: shift the timeline and everything anchored to it
-	   (line, dots, connectors, labels) by a damped vertical offset while a
-	   new event lands. Enabled per-event (event.drop) or globally
-	   (timeline.drop). Background, progress bar and split panel stay fixed. */
-	double drop = (animev && t2g_event_drop(root, animev))
-		? timeline_drop_offset((double)frame / (FRAMES_PER_ITEM - 1),
-		                       t2g_event_drop_amount(root, animev))
-		: 0.0;
+	/* Spring drop: while the animating event falls and lands, deform the line
+	   locally around its x. The deformation is confined to the drop zone via
+	   line_disp()'s bell falloff; the rest of the line stays straight. */
+	double disp_cx = 0, disp_amp = 0, disp_sigma = 1;
+	if (animev && t2g_event_drop(root, animev)) {
+		double prog    = (double)frame / (FRAMES_PER_ITEM - 1);
+		double fall_h  = t2g_event_drop_amount(root, animev);
+		double dot_dy, line_amp;
+		spring_drop(prog, fall_h, fall_h * 0.30, &dot_dy, &line_amp);
+		disp_amp   = line_amp;
+		disp_cx    = render_event_world_x(root, animev, committed_count) - camera_x;
+		disp_sigma = root->item_spacing * 0.5;
+		if (disp_sigma < 55)  disp_sigma = 55;
+		if (disp_sigma > 130) disp_sigma = 130;
+	}
 
-	cairo_save(cr);
-	cairo_translate(cr, 0, drop);
-
-	draw_timeline_line(cr, root, first_event, committed_count, camera_x);
+	draw_timeline_line(cr, root, first_event, committed_count, camera_x,
+	                   disp_cx, disp_amp, disp_sigma);
 
 	/* Pre-compute non-overlapping label positions for all visible events */
 	int total = committed_count + (frame >= 0 ? 1 : 0);
@@ -1165,8 +1244,6 @@ static void render_body(cairo_t *cr, t2g_t *root,
 	if (frame >= 0 && iter)
 		draw_animating_event(cr, root, iter, current_index, frame, camera_x,
 		                     label_cx[committed_count]);
-
-	cairo_restore(cr);
 
 	draw_progress_bar(cr, root, first_event, committed_count, frame);
 

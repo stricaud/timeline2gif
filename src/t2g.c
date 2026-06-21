@@ -107,9 +107,9 @@ t2g_t *t2g_new(void)
 	/* Camera */
 	t2g->camera_scroll = 1;
 
-	/* Timeline drop wobble (opt-in) */
+	/* Timeline spring-drop effect (opt-in). drop_amount = fall height in px. */
 	t2g->timeline_drop        = 0;
-	t2g->timeline_drop_amount = 12;
+	t2g->timeline_drop_amount = 70;
 
 	/* Split-screen */
 	t2g->split_width = 260;

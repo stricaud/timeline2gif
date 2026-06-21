@@ -12,17 +12,19 @@ slide deck, README, or website — no design tools, no timeline editor.
 
 ---
 
-## New: heavy-drop wobble
+## New: spring drop
 
-![Per-event heavy-drop wobble](samples/drop.webp)
+![Per-event spring drop](samples/drop.webp)
 
-Turn on `timeline.drop` and each event lands like a heavy object: the line
-**dips, bounces, and settles**. It's configurable **per event** — let the major
-milestones land with a thud while minor steps glide in flat:
+Turn on `timeline.drop` and an event's dot **falls from above, lands on the
+line, and the line springs back and forth** around the impact point before
+settling — the wobble stays local to the drop zone. It's configurable
+**per event**, so the major milestones can land with a spring while minor
+steps glide in flat:
 
 ```
-event.drop        yes      # this event wobbles…
-event.drop_amount 20       # …with a deeper dip
+event.drop        yes      # this event drops & springs…
+event.drop_amount 90       # …from 90 px above the line
 "v1.0" "Stable release lands"
 
 event.drop no              # …this one glides in flat
@@ -105,7 +107,7 @@ its own colour, or swap the dot for an icon.
 
 | | |
 |---|---|
-| **Heavy-drop wobble** | Events land like a dropped weight — the line dips, bounces, settles; per-event opt-in |
+| **Spring drop** | An event's dot falls in and the line springs locally around the impact, then settles; per-event opt-in |
 | **Animated callouts** | Spotlight each event as a card that fades in, pauses, and exits with `funnel` · `zoom` · `float` · `fan` |
 | **Transitions** | `fade` · `wipe` · `dissolve` · `pixelize` between events |
 | **Split-screen panel** | Side list of all events — past, present, and dimmed future |
@@ -281,7 +283,7 @@ progress.color  argb(255,70,130,180)
 | Sample | Shows off |
 |--------|-----------|
 | [`samples/threat.tig`](samples/threat.tig) | APT intrusion — icons, segment colours, time gaps |
-| [`samples/drop.tig`](samples/drop.tig) | Per-event heavy-drop wobble |
+| [`samples/drop.tig`](samples/drop.tig) | Per-event spring drop |
 | [`samples/callout.tig`](samples/callout.tig) | Callout spotlights with all four exit effects |
 | [`samples/image_callout.tig`](samples/image_callout.tig) | Images inside callouts and connector labels |
 | [`samples/split.tig`](samples/split.tig) | Split-screen event panel |

@@ -1,15 +1,18 @@
-# samples/drop.tig — per-event "heavy drop" timeline wobble
+# samples/drop.tig — per-event spring-drop effect
 #
-# The drop wobble can be set globally or per event, so a "heavy" milestone
-# can land with a thud while lighter steps glide in flat.
+# When enabled, an event's dot falls from above, lands on the timeline, and
+# the line springs back and forth locally around the impact point before
+# settling. It can be set globally or per event, so a major milestone can
+# land with a spring while lighter steps glide in flat.
 #
 #   timeline.drop         yes      enable globally for every event
-#   timeline.drop_amount  <px>     global peak dip (default 12)
+#   timeline.drop_amount  <px>     fall height — how far above the line the
+#                                  dot starts (default 70)
 #   event.drop            yes|no   override for the next event only
-#   event.drop_amount     <px>     per-event dip override
+#   event.drop_amount     <px>     per-event fall-height override
 #
-# Here the effect is OFF globally and switched ON only for the major
-# releases (v1.0 and v2.0), which land heavier than the minor ones.
+# Here the major releases (v1.0, v2.0) drop with a spring while the minor
+# steps glide in flat.
 #
 # Run from the repo root:
 #   ./build/src/timeline2gif  samples/drop.tig  samples/drop.webp
@@ -31,14 +34,14 @@ description.font_size 13
 time.font_size        10
 
 # ── Animation ────────────────────────────────────────────────────────────
-speed.frames     5      # cs per frame — a touch slower so the wobble reads
+speed.frames     7      # cs per frame — slower playback so the drop reads
 speed.nextitem   70
 speed.loop_pause 250
 camera.scroll    yes
 item.spacing     200
 
-# Drop wobble stays OFF globally; major releases opt in per-event below.
-timeline.drop yes      # comment this out to compare — only heavy items drop
+# Enabled globally; the minor steps opt out per-event below.
+timeline.drop yes
 
 # ── Progress bar ─────────────────────────────────────────────────────────
 progress.show  yes
@@ -64,9 +67,9 @@ event.dot_color  argb(255,120,200,255)
 event.text_color argb(255,180,220,255)
 "v0.5" "Beta ships"
 
-# MAJOR — heavy drop
+# MAJOR — heavy drop (event.drop_amount = fall height in px)
 event.drop        yes
-event.drop_amount 20
+event.drop_amount 90
 event.image      "icons/star.svg"
 event.image_size 30
 event.dot_color  argb(255,255,220,90)
@@ -83,7 +86,7 @@ event.text_color argb(255,150,240,190)
 
 # MAJOR — heavy drop
 event.drop        yes
-event.drop_amount 22
+event.drop_amount 100
 event.image      "icons/lock.svg"
 event.image_size 30
 event.dot_color  argb(255,200,150,255)

@@ -90,8 +90,8 @@ argb(128,255,0,0)        # semi-transparent red
 |---------|------|---------|-------------|
 | `timeline.position` | integer | `height / 2 + 10` | Y coordinate of the horizontal timeline line |
 | `timeline.color` | argb | same as `theme.accent` | Color of the timeline line |
-| `timeline.drop` | `yes` / `no` | `no` | When a new event lands, the line dips and oscillates like a heavy object dropped on it, then settles |
-| `timeline.drop_amount` | integer | `12` | Peak vertical displacement of the drop wobble, in pixels |
+| `timeline.drop` | `yes` / `no` | `no` | When a new event lands, its dot falls from above and the line springs back and forth locally around the impact point, then settles |
+| `timeline.drop_amount` | integer | `70` | Fall height — how far above the line the dot starts, in pixels (also scales the spring depth) |
 
 ---
 
@@ -375,8 +375,8 @@ event only, then reset.
 |---------|------|-------------|
 | `event.x`     | integer (px) | Explicit world-space x position; always overrides auto-positioning |
 | `event.pause` | integer (cs) | Hold duration after this event animates in; overrides `speed.nextitem` |
-| `event.drop`  | `yes` / `no` | Enable/disable the heavy-drop wobble for this event; overrides `timeline.drop` |
-| `event.drop_amount` | integer (px) | Per-event drop dip; overrides `timeline.drop_amount` |
+| `event.drop`  | `yes` / `no` | Enable/disable the spring drop for this event; overrides `timeline.drop` |
+| `event.drop_amount` | integer (px) | Per-event fall height; overrides `timeline.drop_amount` |
 
 ### Icon
 
