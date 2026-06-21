@@ -1,0 +1,70 @@
+# samples/embedded.tig — self-contained timeline with embedded SVG icons
+#
+# define.svg declares an SVG inline; reference it by name anywhere an image
+# is expected (event.image, event.callout_image, event.label_image,
+# callout.image). No external icon files needed — this .tig is portable on
+# its own.
+#
+# Run from the repo root:
+#   ./build/src/timeline2gif  samples/embedded.tig  samples/embedded.webp
+
+# ── Embedded icons (header) ──────────────────────────────────────────────
+define.svg rocket <<END
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 2c3 2 4 6 4 9l-4 3-4-3c0-3 1-7 4-9z" fill="#7bd0ff"/>
+  <circle cx="12" cy="9" r="1.6" fill="#0a2540"/>
+  <path d="M8 18l-2 4 4-2m6 0l4 2-2-4" stroke="#ff8a4a" stroke-width="1.6"
+        fill="none" stroke-linecap="round"/>
+</svg>
+END
+
+define.svg star <<END
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9"
+           fill="#ffd24a" stroke="#fff0b0" stroke-width="0.8"/>
+</svg>
+END
+
+define.svg flag <<END
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <rect x="5" y="3" width="2" height="18" fill="#cfd6e6"/>
+  <path d="M7 4h11l-3 4 3 4H7z" fill="#5ad08a"/>
+</svg>
+END
+
+# ── Canvas & theme ───────────────────────────────────────────────────────
+image.width  900
+image.height 420
+theme.background  argb(255,14,18,28)
+theme.background2 argb(255,8,10,18)
+theme.accent      argb(255,120,200,255)
+theme.text        argb(255,222,230,245)
+
+timeline.position 220
+description.font_size 13
+time.font_size        10
+
+speed.frames     5
+speed.nextitem   70
+speed.loop_pause 250
+camera.scroll    yes
+item.spacing     200
+
+progress.show  yes
+progress.color argb(255,120,200,255)
+
+# ── Events — icons referenced by their embedded names ────────────────────
+event.image      flag
+event.image_size 28
+event.dot_color  argb(255,90,210,140)
+"v0.1" "Project starts"
+
+event.image      rocket
+event.image_size 30
+event.dot_color  argb(255,120,200,255)
+"v1.0" "First launch"
+
+event.image      star
+event.image_size 30
+event.dot_color  argb(255,255,210,80)
+"v2.0" "Milestone reached"
