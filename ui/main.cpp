@@ -23,14 +23,17 @@ public:
         return true;
     }
 
+#ifdef __WXMAC__
     // macOS: double-clicking a .tig in Finder (or `open file.tig`) routes
     // here rather than through argv. Open every file we are handed.
+    // (wxApp::MacOpenFiles only exists in the macOS port, hence the guard.)
     void MacOpenFiles(const wxArrayString &fileNames) override {
         for (const wxString &path : fileNames) {
             if (m_frame) m_frame->OpenFile(path);
             else         m_pendingFile = path;   // arrived before OnInit
         }
     }
+#endif
 
 private:
     MainFrame *m_frame = nullptr;
