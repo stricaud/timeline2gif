@@ -585,6 +585,18 @@ static void draw_connector(cairo_t *cr,
 	cairo_stroke(cr);
 }
 
+/* When an event has both a label image and label text, the caption is dropped
+   below the icon so the two don't overlap. Returns the y at which to centre
+   the label text given the icon's centre y. With no image, text stays put. */
+static double label_text_cy(t2g_t *ev, double icon_cy)
+{
+	if (!ev->label_image || !ev->label_text || !*ev->label_text)
+		return icon_cy;
+	int isz = ev->label_image_size > 0 ? ev->label_image_size : DEFAULT_LABEL_IMAGE_SIZE;
+	int fs  = t2g_get_description_font_size(ev);
+	return icon_cy + isz / 2.0 + 6 + fs * 0.7;   /* below the icon, small gap */
+}
+
 /* ── Draw one fully-committed event ─────────────────────────────────── */
 
 static void draw_committed_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
@@ -615,7 +627,7 @@ static void draw_committed_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 	draw_text(cr, ev->label_text,
 	          t2g_get_description_font(ev),
 	          t2g_get_description_font_size(ev),
-	          label_cx, label_y, tc, alpha, root->width);
+	          label_cx, label_text_cy(ev, label_y), tc, alpha, root->width);
 	draw_text(cr, ev->time_text,
 	          t2g_get_time_font(ev),
 	          t2g_get_time_font_size(ev),
@@ -689,16 +701,17 @@ static void draw_animating_event(cairo_t *cr, t2g_t *root, t2g_t *ev,
 		double label_slide = 12.0 * (1.0 - text_a);
 		double time_slide  =  6.0 * (1.0 - text_a);
 
+		double icon_cy = label_y - dir * label_slide;
 		if (ev->label_image) {
 			int sz = ev->label_image_size > 0 ? ev->label_image_size : DEFAULT_LABEL_IMAGE_SIZE;
 			draw_image(cr, ev->label_image, sz,
-			           label_cx, label_y - dir * label_slide, 1.0, text_a);
+			           label_cx, icon_cy, 1.0, text_a);
 		}
 
 		draw_text(cr, ev->label_text,
 		          t2g_get_description_font(ev),
 		          t2g_get_description_font_size(ev),
-		          label_cx, label_y - dir * label_slide,
+		          label_cx, label_text_cy(ev, icon_cy),
 		          tc, text_a, root->width);
 
 		draw_text(cr, ev->time_text,
