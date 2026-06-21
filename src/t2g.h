@@ -167,7 +167,14 @@ void   t2g_free(t2g_t *timeline);
 /* Set the base directory used to resolve relative paths in a .tig file.
    Call with argv[1] (the .tig path) before parsing. */
 void        t2g_set_basedir(const char *tig_path);
+void        t2g_set_basedir_dir(const char *dir);
 const char *t2g_get_basedir(void);
+
+/* Named inline SVG images declared with `define.svg name << … `.
+   t2g_lookup_svg returns the stored markup, or NULL if no such name. */
+void        t2g_define_svg(const char *name, const char *data);
+const char *t2g_lookup_svg(const char *name);
+void        t2g_clear_svg_defs(void);
 
 char *t2g_find_default_font(void);
 char *t2g_get_description_font(t2g_t *t2g);

@@ -286,6 +286,7 @@ progress.color  argb(255,70,130,180)
 | [`samples/drop.tig`](samples/drop.tig) | Per-event spring drop |
 | [`samples/callout.tig`](samples/callout.tig) | Callout spotlights with all four exit effects |
 | [`samples/image_callout.tig`](samples/image_callout.tig) | Images inside callouts and connector labels |
+| [`samples/embedded.tig`](samples/embedded.tig) | Self-contained file with `define.svg` inline icons |
 | [`samples/split.tig`](samples/split.tig) | Split-screen event panel |
 | [`samples/pause.tig`](samples/pause.tig) | Per-event pacing and the progress bar |
 | [`samples/transitions.tig`](samples/transitions.tig) | Dissolve transitions, real-month positioning |

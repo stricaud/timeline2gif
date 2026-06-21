@@ -95,6 +95,20 @@ static t2gcolor_t parse_argb(const char *str)
 	return c;
 }
 
+/* Resolve an image reference (returns a newly-allocated string):
+   - a name from `define.svg` → the inline SVG markup itself
+   - an absolute path (/ or ~)  → used verbatim
+   - otherwise                  → resolved relative to the .tig directory */
+static char *resolve_image_ref(const char *val)
+{
+	const char *svg = t2g_lookup_svg(val);
+	if (svg) return strdup(svg);
+	if (val[0] == '/' || val[0] == '~') return strdup(val);
+	char resolved[4096];
+	snprintf(resolved, sizeof(resolved), "%s/%s", t2g_get_basedir(), val);
+	return strdup(resolved);
+}
+
 %}
 
 %union {
@@ -181,53 +195,23 @@ setting_str: TOK_WORD TOK_DOT TOK_WORD str_val
 			free(pending.callout_effect);
 			pending.callout_effect = strdup($4);
 
-		/* Per-event: image path — resolve relative to the .tig file */
+		/* Image references: a define.svg name, an absolute path, or a
+		   path relative to the .tig file (see resolve_image_ref). */
 		} else if (!strcmp($1, "event") && !strcmp($3, "image")) {
 			free(pending.dot_image);
-			if ($4[0] == '/' || $4[0] == '~') {
-				pending.dot_image = strdup($4);
-			} else {
-				char resolved[4096];
-				snprintf(resolved, sizeof(resolved), "%s/%s",
-				         t2g_get_basedir(), $4);
-				pending.dot_image = strdup(resolved);
-			}
+			pending.dot_image = resolve_image_ref($4);
 
-		/* Per-event: callout image override */
 		} else if (!strcmp($1, "event") && !strcmp($3, "callout_image")) {
 			free(pending.callout_image);
-			if ($4[0] == '/' || $4[0] == '~') {
-				pending.callout_image = strdup($4);
-			} else {
-				char resolved[4096];
-				snprintf(resolved, sizeof(resolved), "%s/%s",
-				         t2g_get_basedir(), $4);
-				pending.callout_image = strdup(resolved);
-			}
+			pending.callout_image = resolve_image_ref($4);
 
-		/* Per-event: label area image */
 		} else if (!strcmp($1, "event") && !strcmp($3, "label_image")) {
 			free(pending.label_image);
-			if ($4[0] == '/' || $4[0] == '~') {
-				pending.label_image = strdup($4);
-			} else {
-				char resolved[4096];
-				snprintf(resolved, sizeof(resolved), "%s/%s",
-				         t2g_get_basedir(), $4);
-				pending.label_image = strdup(resolved);
-			}
+			pending.label_image = resolve_image_ref($4);
 
-		/* Global: callout image and size */
 		} else if (!strcmp($1, "callout") && !strcmp($3, "image")) {
 			free(timeline->callout_image);
-			if ($4[0] == '/' || $4[0] == '~') {
-				timeline->callout_image = strdup($4);
-			} else {
-				char resolved[4096];
-				snprintf(resolved, sizeof(resolved), "%s/%s",
-				         t2g_get_basedir(), $4);
-				timeline->callout_image = strdup(resolved);
-			}
+			timeline->callout_image = resolve_image_ref($4);
 		}
 
 		free($1); free($3); free($4);
@@ -373,6 +357,7 @@ item: TOK_STRING TOK_STRING
 void t2g_parser_init(void)
 {
 	pending_reset();
+	t2g_clear_svg_defs();   /* fresh registry for each parse */
 }
 
 void t2g_parser_terminate(void)

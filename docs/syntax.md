@@ -385,7 +385,48 @@ event only, then reset.
 | `event.image`      | quoted path | — | PNG or SVG to draw instead of the standard dot |
 | `event.image_size` | integer (px) | `28` | Icon diameter |
 
-Relative paths are resolved relative to the `.tig` file's own directory.
+#### Image paths
+
+All image settings — `event.image`, `event.callout_image`, `event.label_image`
+and the global `callout.image` — accept SVG, PNG, GIF or JPEG files.
+
+**Relative paths are resolved against the `.tig` file's own directory**, not the
+current working directory. So `"icons/shield.svg"` next to a file in `samples/`
+loads `samples/icons/shield.svg` regardless of where you run the command from.
+
+In the **Timeline Studio** GUI, paths resolve against the folder of the file you
+opened. A brand-new, **unsaved** document has no folder yet, so relative image
+paths won't load until you save it (until then, use an absolute path).
+
+#### Embedding SVG — `define.svg`
+
+To keep a `.tig` file self-contained (no external icon files to ship), declare
+an SVG inline in the header and reference it **by name** anywhere an image is
+expected. The body runs from `<< TERM` to a line containing only `TERM`
+(a "heredoc"):
+
+```
+define.svg shield <<END
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z"
+        fill="#4aa3ff"/>
+</svg>
+END
+
+event.image         shield     # a bare name → the embedded SVG
+event.callout_image shield
+event.label_image   shield
+```
+
+Notes:
+
+- Any image setting accepts a name: a **bare word** is looked up as a
+  `define.svg` name first; if there's no such definition it is treated as a
+  file path. Quote the value (`"icons/x.svg"`) when it's a path.
+- Definitions must appear **before** the events that use them (put them in the
+  header). Names are case-sensitive; the terminator (`END` above) can be any
+  word and may differ per block.
+- Only SVG is embeddable; PNG/GIF/JPEG are still referenced by path.
 
 ### Callout exit effect
 
@@ -398,6 +439,11 @@ Relative paths are resolved relative to the `.tig` file's own directory.
 ## Quick reference card
 
 ```
+# Embedded SVG (optional) — reference by name in any image setting
+define.svg <name> <<END
+<svg …>…</svg>
+END
+
 # Canvas
 image.width   <px>
 image.height  <px>

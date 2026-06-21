@@ -22,9 +22,62 @@ void t2g_set_basedir(const char *tig_path)
 	}
 }
 
+/* Set the base directory directly (e.g. the folder of a file being edited in
+   the GUI, when the parsed text lives in a temp file elsewhere). */
+void t2g_set_basedir_dir(const char *dir)
+{
+	if (dir && *dir) {
+		strncpy(_t2g_basedir, dir, sizeof(_t2g_basedir) - 1);
+		_t2g_basedir[sizeof(_t2g_basedir) - 1] = '\0';
+	} else {
+		strcpy(_t2g_basedir, ".");
+	}
+}
+
 const char *t2g_get_basedir(void)
 {
 	return _t2g_basedir;
+}
+
+/* ── Named inline SVG definitions (define.svg) ──────────────────────────
+   The lexer registers `define.svg <name> << … ` blocks here; image settings
+   that name one get its markup instead of a file path. */
+
+typedef struct svg_def {
+	char            *name;
+	char            *data;
+	struct svg_def  *next;
+} svg_def_t;
+
+static svg_def_t *_svg_defs = NULL;
+
+void t2g_define_svg(const char *name, const char *data)
+{
+	if (!name || !*name) return;
+	svg_def_t *d = malloc(sizeof(*d));
+	if (!d) return;
+	d->name = strdup(name);
+	d->data = strdup(data ? data : "");
+	d->next = _svg_defs;
+	_svg_defs = d;
+}
+
+const char *t2g_lookup_svg(const char *name)
+{
+	for (svg_def_t *d = _svg_defs; d; d = d->next)
+		if (!strcmp(d->name, name)) return d->data;
+	return NULL;
+}
+
+void t2g_clear_svg_defs(void)
+{
+	while (_svg_defs) {
+		svg_def_t *next = _svg_defs->next;
+		free(_svg_defs->name);
+		free(_svg_defs->data);
+		free(_svg_defs);
+		_svg_defs = next;
+	}
 }
 
 static const char *_font_search_paths[] = {

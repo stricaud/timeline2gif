@@ -280,8 +280,14 @@ void MainFrame::Generate()
     SetStatus("Generating…");
     wxYield();
 
+    /* Resolve relative image paths against the opened file's folder, not the
+     * temp file's location. Empty (unsaved) → current directory. */
+    wxString baseDir = m_currentFile.empty()
+        ? wxString(".") : wxFileName(m_currentFile).GetPath();
+
     t2g_frame_list_free(&m_frames);
-    int rc = t2g_generate_frames(tempTig.mb_str(), &m_frames);
+    int rc = t2g_generate_frames_in(tempTig.mb_str(), &m_frames,
+                                    baseDir.mb_str());
     wxRemoveFile(tempTig);
 
     if (rc == 0 && m_frames.count > 0) {
@@ -401,7 +407,11 @@ void MainFrame::OnExportAnim(wxCommandEvent &)
     SetStatus("Exporting…");
     wxYield();
 
-    int rc = t2g_generate(tempTig.mb_str(), outPath.mb_str());
+    wxString baseDir = m_currentFile.empty()
+        ? wxString(".") : wxFileName(m_currentFile).GetPath();
+
+    int rc = t2g_generate_in(tempTig.mb_str(), outPath.mb_str(),
+                             baseDir.mb_str());
     wxRemoveFile(tempTig);
 
     if (rc == 0)

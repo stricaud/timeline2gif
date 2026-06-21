@@ -276,13 +276,22 @@ static void draw_image(cairo_t    *cr,
 	double hx = cx - sz / 2.0;
 	double hy = cy - sz / 2.0;
 
-	if (ext && strcasecmp(ext, ".svg") == 0) {
-		/* ── SVG via librsvg ── */
+	/* A define.svg reference stores the SVG markup itself; detect it by the
+	   leading '<' (after any whitespace) rather than a file extension. */
+	const char *q = path;
+	while (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r') q++;
+	int inline_svg = (*q == '<');
+
+	if (inline_svg || (ext && strcasecmp(ext, ".svg") == 0)) {
+		/* ── SVG via librsvg (from memory or file) ── */
 		GError     *gerr   = NULL;
-		RsvgHandle *handle = rsvg_handle_new_from_file(path, &gerr);
+		RsvgHandle *handle = inline_svg
+			? rsvg_handle_new_from_data((const guint8 *)path, strlen(path), &gerr)
+			: rsvg_handle_new_from_file(path, &gerr);
 		if (!handle) {
 			if (gerr) {
-				fprintf(stderr, "SVG load error (%s): %s\n", path, gerr->message);
+				fprintf(stderr, "SVG load error (%s): %s\n",
+				        inline_svg ? "<inline>" : path, gerr->message);
 				g_error_free(gerr);
 			}
 			return;
