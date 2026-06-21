@@ -11,6 +11,7 @@
 !define PUBLISHER   "Seb Tricaud"
 !define REG_KEY     "Software\Microsoft\Windows\CurrentVersion\Uninstall\TimelineStudio"
 !define DIST_DIR    "dist"
+!define PROG_ID     "TimelineStudio.tig"   ; ProgID for the .tig association
 
 Name            "${APP_NAME} ${APP_VERSION}"
 OutFile         "timeline2gif-windows-x86_64-setup.exe"
@@ -71,6 +72,15 @@ Section "Timeline Studio" SecMain
     WriteRegDWORD HKLM "${REG_KEY}" "NoModify" 1
     WriteRegDWORD HKLM "${REG_KEY}" "NoRepair" 1
 
+    ; ── Associate .tig with Timeline Studio ─────────────────────────────────
+    ; HKCR on an admin install maps to HKLM\Software\Classes (machine-wide).
+    WriteRegStr HKCR ".tig" "" "${PROG_ID}"
+    WriteRegStr HKCR "${PROG_ID}" "" "Timeline source"
+    WriteRegStr HKCR "${PROG_ID}\DefaultIcon" "" '"$INSTDIR\${APP_EXE}",0'
+    WriteRegStr HKCR "${PROG_ID}\shell\open\command" "" '"$INSTDIR\${APP_EXE}" "%1"'
+    ; Tell the shell the associations changed so icons refresh immediately.
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
+
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     ; Start Menu shortcuts
@@ -93,6 +103,13 @@ Section "Uninstall"
     Delete "$SMPROGRAMS\Timeline Studio\Timeline Studio.lnk"
     Delete "$SMPROGRAMS\Timeline Studio\Uninstall.lnk"
     RMDir  "$SMPROGRAMS\Timeline Studio"
+
+    ; Remove the .tig association (only if it still points at us).
+    ReadRegStr $0 HKCR ".tig" ""
+    StrCmp $0 "${PROG_ID}" 0 +2
+        DeleteRegKey HKCR ".tig"
+    DeleteRegKey HKCR "${PROG_ID}"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
 
     DeleteRegKey HKLM "${REG_KEY}"
     DeleteRegKey /ifempty HKLM "Software\Timeline Studio"

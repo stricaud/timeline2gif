@@ -118,12 +118,14 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist/samples/icons
+          mkdir -p dist/samples/icons dist/packaging/linux
           cp build/src/timeline2gif dist/
           cp build/ui/Timeline       dist/
           cp QUICKSTART.txt dist/
           cp samples/*.tig dist/samples/ 2>/dev/null || true
           cp samples/icons/*.svg dist/samples/icons/
+          # Ship the .tig file-association files + installer helper.
+          cp packaging/linux/* dist/packaging/linux/
           tar czf timeline2gif-linux-x86_64.tar.gz -C dist .
 
       - uses: actions/upload-artifact@v4
