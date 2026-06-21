@@ -29,6 +29,8 @@
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>AppIcon</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>io.github.timeline2gif.tig</string>
@@ -44,6 +46,8 @@
 			<string>io.github.timeline2gif.tig</string>
 			<key>UTTypeDescription</key>
 			<string>Timeline source</string>
+			<key>UTTypeIconFile</key>
+			<string>AppIcon</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.plain-text</string>
